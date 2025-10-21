@@ -1,0 +1,2 @@
+ALTER TABLE vehicles
+MODIFY COLUMN fuel_type VARCHAR(20) NOT NULL;

@@ -1,0 +1,61 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dztech-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  auth-service:
+    build:
+      context: ./auth-service
+    container_name: dztech-auth-service
+    depends_on:
+      - mysql
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/auth_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: secret
+      SERVER_PORT: 8081
+      RAYDER_SERVICE_BASE_URL: http://rayder-service:8082
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-prod-please-update-1234567890}
+      JWT_ISSUER: ${JWT_ISSUER:-dztech-auth-service}
+    ports:
+      - "5102:8081"
+
+  rayder-service:
+    build:
+      context: ./rayder-service
+    container_name: dztech-rayder-service
+    depends_on:
+      - mysql
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/rayder_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: secret
+      SERVER_PORT: 8082
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-prod-please-update-1234567890}
+      JWT_ISSUER: ${JWT_ISSUER:-dztech-auth-service}
+    ports:
+      - "5103:8082"
+
+  nginx:
+    image: nginx:1.25
+    container_name: dztech-gateway
+    depends_on:
+      - auth-service
+      - rayder-service
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
