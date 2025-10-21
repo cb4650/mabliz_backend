@@ -196,8 +196,8 @@ public class AuthenticationService {
 
     private User createUserForPhone(String phone) {
         String baseIdentifier = sanitizeForIdentifier(phone);
-        String username = generateUniqueUsername("otp_" + baseIdentifier);
-        String email = generateUniqueEmail("otp-" + baseIdentifier);
+        String username = generateUniqueUsername("ryd_" + baseIdentifier);
+        String email = generateUniqueEmail("ryd-" + baseIdentifier);
         String randomPassword = UUID.randomUUID().toString();
 
         User user = User.builder()
