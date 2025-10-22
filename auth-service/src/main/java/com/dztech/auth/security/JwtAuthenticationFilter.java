@@ -40,7 +40,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            JwtTokenService.JwtClaims claims = tokenService.parseToken(token);
+            JwtTokenService.JwtClaims claims = tokenService.parseAccessToken(token);
             JwtAuthenticatedUser userDetails = new JwtAuthenticatedUser(
                     claims.userId(),
                     claims.username(),

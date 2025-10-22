@@ -1,8 +1,7 @@
 package com.dztech.auth.dto;
 
-public record LoginResponse(
+public record TokenRefreshResponse(
         boolean success,
-        boolean newUser,
         String token,
         String refreshToken,
         Long userId,

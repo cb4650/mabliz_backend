@@ -24,6 +24,8 @@ services:
       RAYDER_SERVICE_BASE_URL: http://rayder-service:8082
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-prod-please-update-1234567890}
       JWT_ISSUER: ${JWT_ISSUER:-dztech-auth-service}
+      JWT_ACCESS_EXPIRATION_MINUTES: ${JWT_ACCESS_EXPIRATION_MINUTES:-1440}
+      JWT_REFRESH_EXPIRATION_MINUTES: ${JWT_REFRESH_EXPIRATION_MINUTES:-43200}
     ports:
       - "5102:8081"
 

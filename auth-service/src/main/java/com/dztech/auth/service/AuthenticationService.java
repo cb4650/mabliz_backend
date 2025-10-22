@@ -3,11 +3,14 @@ package com.dztech.auth.service;
 import com.dztech.auth.dto.LoginRequest;
 import com.dztech.auth.dto.LoginResponse;
 import com.dztech.auth.dto.OtpVerificationRequest;
+import com.dztech.auth.dto.TokenRefreshRequest;
+import com.dztech.auth.dto.TokenRefreshResponse;
 import com.dztech.auth.model.User;
 import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.UserProfileRepository;
 import com.dztech.auth.repository.UserRepository;
 import com.dztech.auth.security.JwtTokenService;
+import com.dztech.auth.security.JwtTokenService.JwtClaims;
 import com.dztech.auth.security.JwtTokenService.JwtTokenPayload;
 import java.util.Map;
 import java.util.Optional;
@@ -66,18 +69,13 @@ public class AuthenticationService {
 
         UserProfile savedProfile = userProfileRepository.save(profile);
 
-        String token = jwtTokenService.generateToken(new JwtTokenPayload(
-                user.getId(),
-                user.getUsername(),
-                savedProfile.getEmail(),
-                savedProfile.getPhone(),
-                savedProfile.getName(),
-                Map.of()));
+        TokenPair tokens = issueTokens(user, savedProfile);
 
         return new LoginResponse(
                 true,
                 profileCreated,
-                token,
+                tokens.accessToken(),
+                tokens.refreshToken(),
                 user.getId(),
                 savedProfile.getName(),
                 savedProfile.getPhone(),
@@ -122,22 +120,56 @@ public class AuthenticationService {
             newUser = true;
         }
 
-        String token = jwtTokenService.generateToken(new JwtTokenPayload(
+        TokenPair tokens = issueTokens(user, profile);
+
+        return new LoginResponse(
+                true,
+                newUser,
+                tokens.accessToken(),
+                tokens.refreshToken(),
+                user.getId(),
+                profile.getName(),
+                profile.getPhone(),
+                profile.getEmail());
+    }
+
+    public TokenRefreshResponse refreshToken(TokenRefreshRequest request) {
+        String normalizedRefreshToken = normalizeRefreshToken(request.refreshToken());
+        JwtClaims claims = jwtTokenService.parseRefreshToken(normalizedRefreshToken);
+        Long userId = claims.userId();
+        if (userId == null) {
+            throw new IllegalArgumentException("Refresh token is missing user id");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User account is unavailable for this refresh token"));
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User profile is unavailable for this refresh token"));
+
+        TokenPair tokens = issueTokens(user, profile);
+
+        return new TokenRefreshResponse(
+                true,
+                tokens.accessToken(),
+                tokens.refreshToken(),
+                user.getId(),
+                profile.getName(),
+                profile.getPhone(),
+                profile.getEmail());
+    }
+
+    private TokenPair issueTokens(User user, UserProfile profile) {
+        JwtTokenPayload payload = new JwtTokenPayload(
                 user.getId(),
                 user.getUsername(),
                 profile.getEmail(),
                 profile.getPhone(),
                 profile.getName(),
-                Map.of()));
+                Map.of());
 
-        return new LoginResponse(
-                true,
-                newUser,
-                token,
-                user.getId(),
-                profile.getName(),
-                profile.getPhone(),
-                profile.getEmail());
+        String accessToken = jwtTokenService.generateAccessToken(payload);
+        String refreshToken = jwtTokenService.generateRefreshToken(payload);
+        return new TokenPair(accessToken, refreshToken);
     }
 
     private User resolveUser(String identifier) {
@@ -190,6 +222,14 @@ public class AuthenticationService {
         String trimmed = rawOtp == null ? "" : rawOtp.trim();
         if (!StringUtils.hasText(trimmed)) {
             throw new IllegalArgumentException("OTP is required");
+        }
+        return trimmed;
+    }
+
+    private String normalizeRefreshToken(String rawToken) {
+        String trimmed = rawToken == null ? "" : rawToken.trim();
+        if (!StringUtils.hasText(trimmed)) {
+            throw new IllegalArgumentException("Refresh token is required");
         }
         return trimmed;
     }
@@ -278,5 +318,8 @@ public class AuthenticationService {
             return "Guest " + digits.substring(digits.length() - 4);
         }
         return "Guest " + phone;
+    }
+
+    private record TokenPair(String accessToken, String refreshToken) {
     }
 }

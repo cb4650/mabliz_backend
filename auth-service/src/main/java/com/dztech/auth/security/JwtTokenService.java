@@ -26,6 +26,7 @@ import org.springframework.util.StringUtils;
 @Component
 public class JwtTokenService {
 
+    private static final String TOKEN_TYPE_CLAIM = "token_type";
     private static final Set<String> RESERVED_CLAIMS = Set.of(
             Claims.SUBJECT,
             Claims.ISSUER,
@@ -37,17 +38,20 @@ public class JwtTokenService {
             "username",
             "email",
             "phone",
-            "name");
+            "name",
+            TOKEN_TYPE_CLAIM);
 
     private final SecretKey signingKey;
     private final JwtParser jwtParser;
-    private final Duration tokenTtl;
+    private final Duration accessTokenTtl;
+    private final Duration refreshTokenTtl;
     private final String issuer;
 
     public JwtTokenService(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.issuer}") String issuer,
-            @Value("${jwt.expiration-minutes:43200}") long expirationMinutes) { // 30 days
+            @Value("${jwt.access-expiration-minutes:1440}") long accessExpirationMinutes,
+            @Value("${jwt.refresh-expiration-minutes:43200}") long refreshExpirationMinutes) {
         if (!StringUtils.hasText(secret)) {
             throw new IllegalArgumentException("JWT secret must be configured");
         }
@@ -57,20 +61,29 @@ public class JwtTokenService {
         }
         this.signingKey = Keys.hmacShaKeyFor(secretBytes);
         this.issuer = issuer;
-        this.tokenTtl = Duration.ofMinutes(Math.max(1, expirationMinutes));
+        this.accessTokenTtl = Duration.ofMinutes(Math.max(1, accessExpirationMinutes));
+        this.refreshTokenTtl = Duration.ofMinutes(Math.max(1, refreshExpirationMinutes));
         this.jwtParser = Jwts.parserBuilder()
                 .setSigningKey(signingKey)
                 .requireIssuer(issuer)
                 .build();
     }
 
-    public String generateToken(JwtTokenPayload payload) {
+    public String generateAccessToken(JwtTokenPayload payload) {
+        return generateToken(payload, TokenType.ACCESS, accessTokenTtl);
+    }
+
+    public String generateRefreshToken(JwtTokenPayload payload) {
+        return generateToken(payload, TokenType.REFRESH, refreshTokenTtl);
+    }
+
+    private String generateToken(JwtTokenPayload payload, TokenType tokenType, Duration ttl) {
         Objects.requireNonNull(payload, "payload cannot be null");
         if (payload.userId() == null) {
             throw new IllegalArgumentException("User id is required to generate JWT");
         }
         Instant now = Instant.now();
-        Instant expiry = now.plus(tokenTtl);
+        Instant expiry = now.plus(ttl);
 
         Map<String, Object> claims = new HashMap<>();
         if (StringUtils.hasText(payload.username())) {
@@ -90,6 +103,7 @@ public class JwtTokenService {
                 claims.put(key, value);
             }
         });
+        claims.put(TOKEN_TYPE_CLAIM, tokenType.name());
 
         return Jwts.builder()
                 .setSubject(payload.userId().toString())
@@ -101,7 +115,19 @@ public class JwtTokenService {
                 .compact();
     }
 
-    public JwtClaims parseToken(String token) {
+    public JwtClaims parseAccessToken(String token) {
+        JwtClaims claims = parseToken(token);
+        ensureTokenType(claims.tokenType(), TokenType.ACCESS);
+        return claims;
+    }
+
+    public JwtClaims parseRefreshToken(String token) {
+        JwtClaims claims = parseToken(token);
+        ensureTokenType(claims.tokenType(), TokenType.REFRESH);
+        return claims;
+    }
+
+    private JwtClaims parseToken(String token) {
         try {
             Jws<Claims> jws = jwtParser.parseClaimsJws(token);
             Claims claims = jws.getBody();
@@ -110,6 +136,7 @@ public class JwtTokenService {
             String email = claims.get("email", String.class);
             String phone = claims.get("phone", String.class);
             String name = claims.get("name", String.class);
+            TokenType tokenType = parseTokenType(claims.get(TOKEN_TYPE_CLAIM, String.class));
 
             Map<String, Object> additional = new HashMap<>();
             claims.forEach((key, value) -> {
@@ -124,6 +151,7 @@ public class JwtTokenService {
                     email,
                     phone,
                     name,
+                    tokenType,
                     Collections.unmodifiableMap(additional));
         } catch (UnsupportedJwtException ex) {
             throw ex;
@@ -142,6 +170,23 @@ public class JwtTokenService {
             return Long.valueOf(subject);
         } catch (NumberFormatException ex) {
             throw new JwtAuthenticationException("JWT subject must be numeric", ex);
+        }
+    }
+
+    private TokenType parseTokenType(String rawTokenType) {
+        if (!StringUtils.hasText(rawTokenType)) {
+            throw new JwtAuthenticationException("JWT token type is missing");
+        }
+        try {
+            return TokenType.valueOf(rawTokenType);
+        } catch (IllegalArgumentException ex) {
+            throw new JwtAuthenticationException("JWT token type is invalid", ex);
+        }
+    }
+
+    private void ensureTokenType(TokenType actual, TokenType expected) {
+        if (actual != expected) {
+            throw new JwtAuthenticationException("JWT token is not a " + expected.name().toLowerCase() + " token");
         }
     }
 
@@ -164,6 +209,12 @@ public class JwtTokenService {
             String email,
             String phone,
             String name,
+            TokenType tokenType,
             Map<String, Object> additionalClaims) {
+    }
+
+    public enum TokenType {
+        ACCESS,
+        REFRESH
     }
 }
