@@ -47,7 +47,7 @@ public class JwtTokenService {
     public JwtTokenService(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.issuer}") String issuer,
-            @Value("${jwt.expiration-minutes:60}") long expirationMinutes) {
+            @Value("${jwt.expiration-minutes:43,200}") long expirationMinutes) {
         if (!StringUtils.hasText(secret)) {
             throw new IllegalArgumentException("JWT secret must be configured");
         }
