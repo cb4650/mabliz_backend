@@ -4,6 +4,8 @@ import com.dztech.rayder.dto.CreateVehicleRequest;
 import com.dztech.rayder.dto.UpdateVehicleRequest;
 import com.dztech.rayder.dto.VehicleResponse;
 import com.dztech.rayder.exception.ResourceNotFoundException;
+import com.dztech.rayder.model.CarBrand;
+import com.dztech.rayder.model.CarModel;
 import com.dztech.rayder.model.Vehicle;
 import com.dztech.rayder.repository.VehicleRepository;
 import java.time.LocalDate;
@@ -15,19 +17,28 @@ import org.springframework.transaction.annotation.Transactional;
 public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
+    private final CarCatalogService carCatalogService;
 
-    public VehicleService(VehicleRepository vehicleRepository) {
+    public VehicleService(VehicleRepository vehicleRepository, CarCatalogService carCatalogService) {
         this.vehicleRepository = vehicleRepository;
+        this.carCatalogService = carCatalogService;
     }
 
     @Transactional
     public VehicleResponse addVehicle(Long userId, CreateVehicleRequest request) {
         validateDateOrder(request.startDate(), request.expiryDate());
 
+        CarBrand brand = carCatalogService.getBrandById(request.brandId());
+        CarModel model = carCatalogService.getModelById(request.modelId());
+
+        if (!model.getBrand().getId().equals(brand.getId())) {
+            throw new IllegalArgumentException("Selected model does not belong to the provided brand");
+        }
+
         Vehicle vehicle = Vehicle.builder()
                 .userId(userId)
-                .brand(request.brand().trim())
-                .model(request.model().trim())
+                .brand(brand)
+                .model(model)
                 .ownershipType(request.ownershipType())
                 .transmission(request.transmission())
                 .fuelType(request.fuelType())
@@ -46,20 +57,29 @@ public class VehicleService {
         Vehicle vehicle = vehicleRepository.findByIdAndUserId(vehicleId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
 
-        if (request.brand() != null) {
-            String brand = request.brand().trim();
-            if (brand.isEmpty()) {
-                throw new IllegalArgumentException("Brand cannot be blank");
-            }
-            vehicle.setBrand(brand);
+        CarBrand updatedBrand = null;
+        CarModel updatedModel = null;
+
+        if (request.brandId() != null) {
+            updatedBrand = carCatalogService.getBrandById(request.brandId());
         }
 
-        if (request.model() != null) {
-            String model = request.model().trim();
-            if (model.isEmpty()) {
-                throw new IllegalArgumentException("Model cannot be blank");
+        if (request.modelId() != null) {
+            updatedModel = carCatalogService.getModelById(request.modelId());
+        }
+
+        if (updatedModel != null) {
+            Long expectedBrandId = updatedBrand != null ? updatedBrand.getId() : updatedModel.getBrand().getId();
+            if (!updatedModel.getBrand().getId().equals(expectedBrandId)) {
+                throw new IllegalArgumentException("Selected model does not belong to the provided brand");
             }
-            vehicle.setModel(model);
+            vehicle.setModel(updatedModel);
+            vehicle.setBrand(updatedModel.getBrand());
+        } else if (updatedBrand != null) {
+            if (!vehicle.getModel().getBrand().getId().equals(updatedBrand.getId())) {
+                throw new IllegalArgumentException("Update model to match the selected brand");
+            }
+            vehicle.setBrand(updatedBrand);
         }
 
         if (request.ownershipType() != null) {
@@ -127,8 +147,10 @@ public class VehicleService {
     private VehicleResponse toResponse(Vehicle vehicle) {
         return new VehicleResponse(
                 vehicle.getId(),
-                vehicle.getBrand(),
-                vehicle.getModel(),
+                vehicle.getBrand().getId(),
+                vehicle.getBrand().getName(),
+                vehicle.getModel().getId(),
+                vehicle.getModel().getName(),
                 vehicle.getOwnershipType(),
                 vehicle.getTransmission(),
                 vehicle.getFuelType(),

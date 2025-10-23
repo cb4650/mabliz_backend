@@ -1,6 +1,7 @@
 package com.dztech.auth.dto;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 public record UpdateUserProfileRequest(
@@ -12,5 +13,11 @@ public record UpdateUserProfileRequest(
         String email,
 
         @Size(max = 255, message = "Address must be at most 255 characters")
-        String address) {
+        String address,
+
+        @Positive(message = "Primary preferred language id must be positive")
+        Long primaryPreferredLanguageId,
+
+        @Positive(message = "Secondary preferred language id must be positive")
+        Long secondaryPreferredLanguageId) {
 }

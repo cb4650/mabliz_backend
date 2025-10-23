@@ -7,8 +7,10 @@ import java.time.LocalDate;
 
 public record VehicleResponse(
         Long id,
-        String brand,
-        String model,
+        Long brandId,
+        String brandName,
+        Long modelId,
+        String modelName,
         VehicleOwnershipType ownershipType,
         VehicleTransmissionType transmission,
         VehicleFuelType fuelType,

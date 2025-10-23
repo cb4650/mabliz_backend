@@ -1,11 +1,18 @@
 package com.dztech.auth.service;
 
 import com.dztech.auth.client.RayderVehicleClient;
+import com.dztech.auth.dto.PreferredLanguageView;
 import com.dztech.auth.dto.UpdateUserProfileRequest;
+import com.dztech.auth.dto.UpdateUserPreferredLanguagesRequest;
 import com.dztech.auth.dto.UserProfileView;
 import com.dztech.auth.exception.ResourceNotFoundException;
+import com.dztech.auth.model.PreferredLanguage;
 import com.dztech.auth.model.UserProfile;
+import com.dztech.auth.repository.PreferredLanguageRepository;
 import com.dztech.auth.repository.UserProfileRepository;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -15,11 +22,15 @@ public class ProfileService {
 
     private final UserProfileRepository userProfileRepository;
     private final RayderVehicleClient rayderVehicleClient;
+    private final PreferredLanguageRepository preferredLanguageRepository;
 
     public ProfileService(
-            UserProfileRepository userProfileRepository, RayderVehicleClient rayderVehicleClient) {
+            UserProfileRepository userProfileRepository,
+            RayderVehicleClient rayderVehicleClient,
+            PreferredLanguageRepository preferredLanguageRepository) {
         this.userProfileRepository = userProfileRepository;
         this.rayderVehicleClient = rayderVehicleClient;
+        this.preferredLanguageRepository = preferredLanguageRepository;
     }
 
     @Transactional(readOnly = true)
@@ -56,6 +67,39 @@ public class ProfileService {
             profile.setAddress(StringUtils.hasText(address) ? address : null);
         }
 
+        if (request.primaryPreferredLanguageId() != null) {
+            profile.setPrimaryPreferredLanguage(resolvePreferredLanguage(request.primaryPreferredLanguageId()));
+        }
+
+        if (request.secondaryPreferredLanguageId() != null) {
+            profile.setSecondaryPreferredLanguage(resolvePreferredLanguage(request.secondaryPreferredLanguageId()));
+        }
+
+        UserProfile updated = userProfileRepository.save(profile);
+        return toView(updated, accessToken);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PreferredLanguageView> listPreferredLanguages() {
+        return preferredLanguageRepository.findAll(Sort.by("name").ascending()).stream()
+                .map(this::toLanguageView)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public UserProfileView updatePreferredLanguages(
+            Long userId, UpdateUserPreferredLanguagesRequest request, String accessToken) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
+        if (request.primaryPreferredLanguageId() != null) {
+            profile.setPrimaryPreferredLanguage(resolvePreferredLanguage(request.primaryPreferredLanguageId()));
+        }
+
+        if (request.secondaryPreferredLanguageId() != null) {
+            profile.setSecondaryPreferredLanguage(resolvePreferredLanguage(request.secondaryPreferredLanguageId()));
+        }
+
         UserProfile updated = userProfileRepository.save(profile);
         return toView(updated, accessToken);
     }
@@ -71,8 +115,30 @@ public class ProfileService {
                 profile.getPhone(),
                 profile.getEmail(),
                 profile.getAddress(),
+                toLanguageView(profile.getPrimaryPreferredLanguage()),
+                toLanguageView(profile.getSecondaryPreferredLanguage()),
                 vehicleCount,
                 completedBookings,
                 activeBookings);
+    }
+
+    private PreferredLanguage resolvePreferredLanguage(Long id) {
+        if (id == null) {
+            return null;
+        }
+
+        if (id <= 0) {
+            return null;
+        }
+
+        return preferredLanguageRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Preferred language not found for id: " + id));
+    }
+
+    private PreferredLanguageView toLanguageView(PreferredLanguage language) {
+        if (language == null) {
+            return null;
+        }
+        return new PreferredLanguageView(language.getId(), language.getCode(), language.getName());
     }
 }

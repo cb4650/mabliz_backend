@@ -1,5 +1,7 @@
 package com.dztech.rayder.controller;
 
+import com.dztech.rayder.dto.CarBrandListResponse;
+import com.dztech.rayder.dto.CarModelListResponse;
 import com.dztech.rayder.dto.CreateVehicleRequest;
 import com.dztech.rayder.dto.UpdateVehicleRequest;
 import com.dztech.rayder.dto.VehicleDeleteResponse;
@@ -7,6 +9,7 @@ import com.dztech.rayder.dto.VehicleListResponse;
 import com.dztech.rayder.dto.VehicleOperationResponse;
 import com.dztech.rayder.dto.VehicleResponse;
 import com.dztech.rayder.security.AuthenticatedUserProvider;
+import com.dztech.rayder.service.CarCatalogService;
 import com.dztech.rayder.service.VehicleService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -26,10 +29,28 @@ public class VehicleController {
 
     private final VehicleService vehicleService;
     private final AuthenticatedUserProvider authenticatedUserProvider;
+    private final CarCatalogService carCatalogService;
 
-    public VehicleController(VehicleService vehicleService, AuthenticatedUserProvider authenticatedUserProvider) {
+    public VehicleController(
+            VehicleService vehicleService,
+            AuthenticatedUserProvider authenticatedUserProvider,
+            CarCatalogService carCatalogService) {
         this.vehicleService = vehicleService;
         this.authenticatedUserProvider = authenticatedUserProvider;
+        this.carCatalogService = carCatalogService;
+    }
+
+    @GetMapping("/brands")
+    public ResponseEntity<CarBrandListResponse> getBrands() {
+        CarBrandListResponse response = new CarBrandListResponse(true, carCatalogService.getAllBrands());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/brands/{brandId}/models")
+    public ResponseEntity<CarModelListResponse> getModels(@PathVariable("brandId") Long brandId) {
+        CarModelListResponse response =
+                new CarModelListResponse(true, carCatalogService.getModelsByBrand(brandId));
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/add")

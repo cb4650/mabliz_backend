@@ -6,17 +6,19 @@ import com.dztech.rayder.model.VehicleTransmissionType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
+import jakarta.validation.constraints.Size;
+
 
 public record UpdateVehicleRequest(
         @Nullable
-        @Size(max = 100, message = "Brand must be at most 100 characters")
-        String brand,
+        @Positive(message = "Brand must be a positive id")
+        Long brandId,
 
         @Nullable
-        @Size(max = 100, message = "Model must be at most 100 characters")
-        String model,
+        @Positive(message = "Model must be a positive id")
+        Long modelId,
 
         @Nullable
         VehicleOwnershipType ownershipType,

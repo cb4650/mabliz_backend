@@ -7,17 +7,18 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 public record CreateVehicleRequest(
-        @NotBlank(message = "Brand is required")
-        @Size(max = 100, message = "Brand must be at most 100 characters")
-        String brand,
+        @NotNull(message = "Brand is required")
+        @Positive(message = "Brand must be a positive id")
+        Long brandId,
 
-        @NotBlank(message = "Model is required")
-        @Size(max = 100, message = "Model must be at most 100 characters")
-        String model,
+        @NotNull(message = "Model is required")
+        @Positive(message = "Model must be a positive id")
+        Long modelId,
 
         @NotNull(message = "Ownership type is required")
         VehicleOwnershipType ownershipType,

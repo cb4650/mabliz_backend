@@ -10,6 +10,8 @@ import com.dztech.rayder.dto.CreateVehicleRequest;
 import com.dztech.rayder.dto.UpdateVehicleRequest;
 import com.dztech.rayder.dto.VehicleResponse;
 import com.dztech.rayder.exception.ResourceNotFoundException;
+import com.dztech.rayder.model.CarBrand;
+import com.dztech.rayder.model.CarModel;
 import com.dztech.rayder.model.Vehicle;
 import com.dztech.rayder.model.VehicleFuelType;
 import com.dztech.rayder.model.VehicleOwnershipType;
@@ -31,18 +33,24 @@ class VehicleServiceTest {
     @Mock
     private VehicleRepository vehicleRepository;
 
+    @Mock
+    private CarCatalogService carCatalogService;
+
     private VehicleService vehicleService;
 
     @BeforeEach
     void setUp() {
-        vehicleService = new VehicleService(vehicleRepository);
+        vehicleService = new VehicleService(vehicleRepository, carCatalogService);
     }
 
     @Test
     void addVehicle_persistsAndReturnsResponse() {
+        CarBrand brand = createBrand(6L, "Toyota");
+        CarModel model = createModel(21L, "Innova", brand);
+
         CreateVehicleRequest request = new CreateVehicleRequest(
-                " Toyota ",
-                " Innova ",
+                6L,
+                21L,
                 VehicleOwnershipType.OWN_VEHICLE,
                 VehicleTransmissionType.MANUAL,
                 VehicleFuelType.DIESEL,
@@ -51,6 +59,8 @@ class VehicleServiceTest {
                 LocalDate.parse("2024-01-10"),
                 LocalDate.parse("2025-01-10"));
 
+        when(carCatalogService.getBrandById(6L)).thenReturn(brand);
+        when(carCatalogService.getModelById(21L)).thenReturn(model);
         when(vehicleRepository.save(any(Vehicle.class))).thenAnswer(invocation -> {
             Vehicle vehicle = invocation.getArgument(0);
             vehicle.setId(12L);
@@ -62,21 +72,24 @@ class VehicleServiceTest {
         ArgumentCaptor<Vehicle> captor = ArgumentCaptor.forClass(Vehicle.class);
         verify(vehicleRepository).save(captor.capture());
         Vehicle persisted = captor.getValue();
-        assertThat(persisted.getBrand()).isEqualTo("Toyota");
-        assertThat(persisted.getModel()).isEqualTo("Innova");
+        assertThat(persisted.getBrand()).isEqualTo(brand);
+        assertThat(persisted.getModel()).isEqualTo(model);
         assertThat(persisted.getPolicyNo()).isEqualTo("POL123");
         assertThat(persisted.getUserId()).isEqualTo(5L);
 
         assertThat(response.id()).isEqualTo(12L);
-        assertThat(response.brand()).isEqualTo("Toyota");
+        assertThat(response.brandId()).isEqualTo(6L);
+        assertThat(response.brandName()).isEqualTo("Toyota");
+        assertThat(response.modelId()).isEqualTo(21L);
+        assertThat(response.modelName()).isEqualTo("Innova");
         assertThat(response.policyNo()).isEqualTo("POL123");
     }
 
     @Test
     void addVehicle_withInvalidDates_throwsIllegalArgumentException() {
         CreateVehicleRequest request = new CreateVehicleRequest(
-                "Toyota",
-                "Innova",
+                6L,
+                21L,
                 VehicleOwnershipType.OWN_VEHICLE,
                 VehicleTransmissionType.MANUAL,
                 VehicleFuelType.DIESEL,
@@ -92,11 +105,16 @@ class VehicleServiceTest {
 
     @Test
     void getVehicles_returnsMappedResponses() {
+        CarBrand toyota = createBrand(6L, "Toyota");
+        CarModel innova = createModel(21L, "Innova", toyota);
+        CarBrand hyundai = createBrand(2L, "Hyundai");
+        CarModel i20 = createModel(6L, "i20", hyundai);
+
         Vehicle first = Vehicle.builder()
                 .id(1L)
                 .userId(3L)
-                .brand("Toyota")
-                .model("Innova")
+                .brand(toyota)
+                .model(innova)
                 .ownershipType(VehicleOwnershipType.OWN_VEHICLE)
                 .transmission(VehicleTransmissionType.MANUAL)
                 .fuelType(VehicleFuelType.DIESEL)
@@ -108,8 +126,8 @@ class VehicleServiceTest {
         Vehicle second = Vehicle.builder()
                 .id(2L)
                 .userId(3L)
-                .brand("Hyundai")
-                .model("i20")
+                .brand(hyundai)
+                .model(i20)
                 .ownershipType(VehicleOwnershipType.COMMERCIAL)
                 .transmission(VehicleTransmissionType.AUTOMATIC)
                 .fuelType(VehicleFuelType.PETROL)
@@ -124,17 +142,23 @@ class VehicleServiceTest {
         List<VehicleResponse> responses = vehicleService.getVehicles(3L);
 
         assertThat(responses).hasSize(2);
-        assertThat(responses.get(0).brand()).isEqualTo("Toyota");
+        assertThat(responses.get(0).brandName()).isEqualTo("Toyota");
+        assertThat(responses.get(0).modelName()).isEqualTo("Innova");
         assertThat(responses.get(1).fuelType()).isEqualTo(VehicleFuelType.PETROL);
     }
 
     @Test
     void updateVehicle_updatesProvidedFieldsOnly() {
+        CarBrand toyota = createBrand(6L, "Toyota");
+        CarModel innova = createModel(21L, "Innova", toyota);
+        CarBrand hyundai = createBrand(2L, "Hyundai");
+        CarModel creta = createModel(7L, "Creta", hyundai);
+
         Vehicle existing = Vehicle.builder()
                 .id(10L)
                 .userId(2L)
-                .brand("Toyota")
-                .model("Innova")
+                .brand(toyota)
+                .model(innova)
                 .ownershipType(VehicleOwnershipType.OWN_VEHICLE)
                 .transmission(VehicleTransmissionType.MANUAL)
                 .fuelType(VehicleFuelType.DIESEL)
@@ -146,10 +170,12 @@ class VehicleServiceTest {
 
         when(vehicleRepository.findByIdAndUserId(10L, 2L)).thenReturn(Optional.of(existing));
         when(vehicleRepository.save(any(Vehicle.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(carCatalogService.getBrandById(2L)).thenReturn(hyundai);
+        when(carCatalogService.getModelById(7L)).thenReturn(creta);
 
         UpdateVehicleRequest request = new UpdateVehicleRequest(
-                "Hyundai",
-                null,
+                2L,
+                7L,
                 VehicleOwnershipType.COMMERCIAL,
                 VehicleTransmissionType.AUTOMATIC,
                 null,
@@ -160,13 +186,15 @@ class VehicleServiceTest {
 
         VehicleResponse response = vehicleService.updateVehicle(2L, 10L, request);
 
-        assertThat(response.brand()).isEqualTo("Hyundai");
+        assertThat(response.brandId()).isEqualTo(2L);
+        assertThat(response.brandName()).isEqualTo("Hyundai");
+        assertThat(response.modelId()).isEqualTo(7L);
+        assertThat(response.modelName()).isEqualTo("Creta");
         assertThat(response.ownershipType()).isEqualTo(VehicleOwnershipType.COMMERCIAL);
         assertThat(response.transmission()).isEqualTo(VehicleTransmissionType.AUTOMATIC);
         assertThat(response.year()).isEqualTo("2023");
         assertThat(response.policyNo()).isEqualTo("HYN99999");
         assertThat(response.expiryDate()).isEqualTo(LocalDate.parse("2025-02-01"));
-        assertThat(response.model()).isEqualTo("Innova");
     }
 
     @Test
@@ -174,7 +202,7 @@ class VehicleServiceTest {
         when(vehicleRepository.findByIdAndUserId(1L, 99L)).thenReturn(Optional.empty());
 
         UpdateVehicleRequest request = new UpdateVehicleRequest(
-                "Toyota",
+                6L,
                 null,
                 null,
                 null,
@@ -191,11 +219,13 @@ class VehicleServiceTest {
 
     @Test
     void deleteVehicle_removesEntity() {
+        CarBrand brand = createBrand(6L, "Toyota");
+        CarModel model = createModel(21L, "Innova", brand);
         Vehicle existing = Vehicle.builder()
                 .id(5L)
                 .userId(3L)
-                .brand("Toyota")
-                .model("Innova")
+                .brand(brand)
+                .model(model)
                 .ownershipType(VehicleOwnershipType.OWN_VEHICLE)
                 .transmission(VehicleTransmissionType.MANUAL)
                 .fuelType(VehicleFuelType.DIESEL)
@@ -210,5 +240,22 @@ class VehicleServiceTest {
         vehicleService.deleteVehicle(3L, 5L);
 
         verify(vehicleRepository).delete(existing);
+    }
+
+    private CarBrand createBrand(long id, String name) {
+        CarBrand brand = new CarBrand();
+        brand.setId(id);
+        brand.setName(name);
+        brand.setCountry("Country");
+        brand.setCategory("Category");
+        return brand;
+    }
+
+    private CarModel createModel(long id, String name, CarBrand brand) {
+        CarModel model = new CarModel();
+        model.setId(id);
+        model.setName(name);
+        model.setBrand(brand);
+        return model;
     }
 }

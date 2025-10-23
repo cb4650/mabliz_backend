@@ -1,6 +1,8 @@
 package com.dztech.auth.controller;
 
 import com.dztech.auth.dto.UpdateUserProfileRequest;
+import com.dztech.auth.dto.PreferredLanguageListResponse;
+import com.dztech.auth.dto.UpdateUserPreferredLanguagesRequest;
 import com.dztech.auth.dto.UserProfileResponse;
 import com.dztech.auth.dto.UserProfileUpdateResponse;
 import com.dztech.auth.dto.UserProfileView;
@@ -36,6 +38,12 @@ public class ProfileController {
         return ResponseEntity.ok(new UserProfileResponse(true, profile));
     }
 
+    @GetMapping("/preferred-languages")
+    public ResponseEntity<PreferredLanguageListResponse> listPreferredLanguages() {
+        return ResponseEntity.ok(
+                new PreferredLanguageListResponse(true, profileService.listPreferredLanguages()));
+    }
+
     @PutMapping("/update")
     public ResponseEntity<UserProfileUpdateResponse> updateProfile(
             Authentication authentication, @RequestBody @Valid UpdateUserProfileRequest request) {
@@ -43,6 +51,16 @@ public class ProfileController {
         String accessToken = resolveAccessToken(authentication);
         UserProfileView updated = profileService.updateProfile(userId, request, accessToken);
         return ResponseEntity.ok(new UserProfileUpdateResponse(true, "Profile updated successfully", updated));
+    }
+
+    @PutMapping("/preferred-languages")
+    public ResponseEntity<UserProfileUpdateResponse> updatePreferredLanguages(
+            Authentication authentication, @RequestBody @Valid UpdateUserPreferredLanguagesRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        String accessToken = resolveAccessToken(authentication);
+        UserProfileView updated = profileService.updatePreferredLanguages(userId, request, accessToken);
+        return ResponseEntity.ok(
+                new UserProfileUpdateResponse(true, "Preferred languages updated successfully", updated));
     }
 
     private String resolveAccessToken(Authentication authentication) {

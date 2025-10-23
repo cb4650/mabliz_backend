@@ -10,6 +10,7 @@ import com.dztech.auth.client.RayderVehicleClient;
 import com.dztech.auth.dto.UpdateUserProfileRequest;
 import com.dztech.auth.dto.UserProfileView;
 import com.dztech.auth.model.UserProfile;
+import com.dztech.auth.repository.PreferredLanguageRepository;
 import com.dztech.auth.repository.UserProfileRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,11 +28,15 @@ class ProfileServiceTest {
     @Mock
     private RayderVehicleClient rayderVehicleClient;
 
+    @Mock
+    private PreferredLanguageRepository preferredLanguageRepository;
+
     private ProfileService profileService;
 
     @BeforeEach
     void setUp() {
-        profileService = new ProfileService(userProfileRepository, rayderVehicleClient);
+        profileService =
+                new ProfileService(userProfileRepository, rayderVehicleClient, preferredLanguageRepository);
     }
 
     @Test
@@ -73,8 +78,8 @@ class ProfileServiceTest {
         when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(rayderVehicleClient.fetchVehicleCount("token")).thenReturn(3L);
 
-        UpdateUserProfileRequest request =
-                new UpdateUserProfileRequest("Elamugil M", "UPDATED@example.com", "New Address");
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest(
+                "Elamugil M", "UPDATED@example.com", "New Address", null, null);
 
         UserProfileView view = profileService.updateProfile(1L, request, "token");
 
@@ -99,7 +104,7 @@ class ProfileServiceTest {
 
         when(userProfileRepository.findByUserId(1L)).thenReturn(Optional.of(profile));
 
-        UpdateUserProfileRequest request = new UpdateUserProfileRequest("  ", null, null);
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest("  ", null, null, null, null);
 
         assertThatThrownBy(() -> profileService.updateProfile(1L, request, "token"))
                 .isInstanceOf(IllegalArgumentException.class)
