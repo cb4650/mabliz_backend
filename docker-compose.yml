@@ -4,7 +4,7 @@ services:
     container_name: dztech-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: TTY5618uan##@!241
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
