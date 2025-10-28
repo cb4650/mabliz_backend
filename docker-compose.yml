@@ -9,8 +9,6 @@ services:
       - mysql_data:/var/lib/mysql
     expose:
       - "3306"
-    networks:
-      - internal_net
 
   auth-service:
     build:
