@@ -1,5 +1,7 @@
 package com.dztech.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public record TokenRefreshResponse(
         boolean success,
         String token,
@@ -7,5 +9,7 @@ public record TokenRefreshResponse(
         Long userId,
         String name,
         String phone,
-        String email) {
+        String email,
+        @JsonProperty("isEmailVerified")
+        boolean emailVerified) {
 }

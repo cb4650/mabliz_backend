@@ -104,7 +104,8 @@ public class AuthenticationService {
                 user.getId(),
                 profile.getName(),
                 profile.getPhone(),
-                profile.getEmail());
+                profile.getEmail(),
+                profile.isEmailVerified());
     }
 
     public TokenRefreshResponse refreshToken(TokenRefreshRequest request) {
@@ -130,7 +131,8 @@ public class AuthenticationService {
                 user.getId(),
                 profile.getName(),
                 profile.getPhone(),
-                profile.getEmail());
+                profile.getEmail(),
+                profile.isEmailVerified());
     }
 
     private AppId resolveAppIdFromClaims(JwtClaims claims) {
@@ -217,6 +219,7 @@ public class AuthenticationService {
                 .name(defaultNameFromPhone(phone))
                 .phone(phone)
                 .email(user.getEmail())
+                .emailVerified(false)
                 .build();
         return userProfileRepository.save(profile);
     }

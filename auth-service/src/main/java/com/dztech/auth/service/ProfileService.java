@@ -5,6 +5,7 @@ import com.dztech.auth.dto.PreferredLanguageView;
 import com.dztech.auth.dto.UpdateUserProfileRequest;
 import com.dztech.auth.dto.UpdateUserPreferredLanguagesRequest;
 import com.dztech.auth.dto.UserProfileView;
+import com.dztech.auth.dto.VerifyEmailOtpRequest;
 import com.dztech.auth.exception.ResourceNotFoundException;
 import com.dztech.auth.model.PreferredLanguage;
 import com.dztech.auth.model.UserProfile;
@@ -23,14 +24,17 @@ public class ProfileService {
     private final UserProfileRepository userProfileRepository;
     private final RayderVehicleClient rayderVehicleClient;
     private final PreferredLanguageRepository preferredLanguageRepository;
+    private final EmailOtpService emailOtpService;
 
     public ProfileService(
             UserProfileRepository userProfileRepository,
             RayderVehicleClient rayderVehicleClient,
-            PreferredLanguageRepository preferredLanguageRepository) {
+            PreferredLanguageRepository preferredLanguageRepository,
+            EmailOtpService emailOtpService) {
         this.userProfileRepository = userProfileRepository;
         this.rayderVehicleClient = rayderVehicleClient;
         this.preferredLanguageRepository = preferredLanguageRepository;
+        this.emailOtpService = emailOtpService;
     }
 
     @Transactional(readOnly = true)
@@ -54,12 +58,19 @@ public class ProfileService {
             profile.setName(name);
         }
 
+        boolean emailChanged = false;
         if (request.email() != null) {
             String email = request.email().trim();
             if (email.isEmpty()) {
                 throw new IllegalArgumentException("Email cannot be blank");
             }
-            profile.setEmail(email.toLowerCase());
+            String normalizedEmail = email.toLowerCase();
+            String currentEmail = profile.getEmail();
+            if (currentEmail == null || !currentEmail.equalsIgnoreCase(normalizedEmail)) {
+                profile.setEmail(normalizedEmail);
+                profile.setEmailVerified(false);
+                emailChanged = true;
+            }
         }
 
         if (request.address() != null) {
@@ -76,6 +87,12 @@ public class ProfileService {
         }
 
         UserProfile updated = userProfileRepository.save(profile);
+
+        if (emailChanged) {
+            emailOtpService.sendVerificationOtp(
+                    userId, updated.getEmail(), updated.getName());
+        }
+
         return toView(updated, accessToken);
     }
 
@@ -104,6 +121,27 @@ public class ProfileService {
         return toView(updated, accessToken);
     }
 
+    @Transactional
+    public UserProfileView verifyEmail(Long userId, VerifyEmailOtpRequest request, String accessToken) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
+        String normalizedEmail = request.email().trim().toLowerCase();
+        String currentEmail = profile.getEmail();
+        if (currentEmail == null || !currentEmail.equalsIgnoreCase(normalizedEmail)) {
+            throw new IllegalArgumentException("Email does not match the current profile email");
+        }
+
+        emailOtpService.verifyOtp(userId, normalizedEmail, request.otp());
+
+        if (!normalizedEmail.equals(currentEmail)) {
+            profile.setEmail(normalizedEmail);
+        }
+        profile.setEmailVerified(true);
+        UserProfile updated = userProfileRepository.save(profile);
+        return toView(updated, accessToken);
+    }
+
     private UserProfileView toView(UserProfile profile, String accessToken) {
         long vehicleCount = rayderVehicleClient.fetchVehicleCount(accessToken);
         long completedBookings = 0L;
@@ -114,6 +152,7 @@ public class ProfileService {
                 profile.getName(),
                 profile.getPhone(),
                 profile.getEmail(),
+                profile.isEmailVerified(),
                 profile.getAddress(),
                 toLanguageView(profile.getPrimaryPreferredLanguage()),
                 toLanguageView(profile.getSecondaryPreferredLanguage()),

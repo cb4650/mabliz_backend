@@ -6,6 +6,7 @@ import com.dztech.auth.dto.UpdateUserPreferredLanguagesRequest;
 import com.dztech.auth.dto.UserProfileResponse;
 import com.dztech.auth.dto.UserProfileUpdateResponse;
 import com.dztech.auth.dto.UserProfileView;
+import com.dztech.auth.dto.VerifyEmailOtpRequest;
 import com.dztech.auth.security.AuthenticatedUserProvider;
 import com.dztech.auth.security.JwtAuthenticationToken;
 import com.dztech.auth.service.ProfileService;
@@ -13,6 +14,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -61,6 +63,15 @@ public class ProfileController {
         UserProfileView updated = profileService.updatePreferredLanguages(userId, request, accessToken);
         return ResponseEntity.ok(
                 new UserProfileUpdateResponse(true, "Preferred languages updated successfully", updated));
+    }
+
+    @PostMapping("/email/verify")
+    public ResponseEntity<UserProfileUpdateResponse> verifyEmail(
+            Authentication authentication, @RequestBody @Valid VerifyEmailOtpRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        String accessToken = resolveAccessToken(authentication);
+        UserProfileView verified = profileService.verifyEmail(userId, request, accessToken);
+        return ResponseEntity.ok(new UserProfileUpdateResponse(true, "Email verified successfully", verified));
     }
 
     private String resolveAccessToken(Authentication authentication) {

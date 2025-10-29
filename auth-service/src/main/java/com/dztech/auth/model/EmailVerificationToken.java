@@ -2,10 +2,10 @@ package com.dztech.auth.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -17,46 +17,40 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "user_profiles")
+@Table(name = "email_verification_tokens", indexes = {
+        @Index(name = "idx_email_verification_tokens_user_email", columnList = "user_id,email")
+})
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserProfile {
+public class EmailVerificationToken {
 
     @Id
-    @Column(name = "user_id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "user_id", nullable = false)
     private Long userId;
-
-    @Column(nullable = false, length = 150)
-    private String name;
-
-    @Column(nullable = false, length = 25)
-    private String phone;
 
     @Column(nullable = false, length = 150)
     private String email;
 
-    @Column(name = "email_verified", nullable = false)
-    private boolean emailVerified;
+    @Column(name = "otp_code", nullable = false, length = 12)
+    private String otpCode;
 
-    @Column(length = 255)
-    private String address;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "primary_preferred_language_id")
-    private PreferredLanguage primaryPreferredLanguage;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "secondary_preferred_language_id")
-    private PreferredLanguage secondaryPreferredLanguage;
+    @Column(name = "expires_at", nullable = false)
+    private Instant expiresAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Column(name = "verified_at")
+    private Instant verifiedAt;
 
     @PrePersist
     void onCreate() {
@@ -68,5 +62,13 @@ public class UserProfile {
     @PreUpdate
     void onUpdate() {
         this.updatedAt = Instant.now();
+    }
+
+    public boolean isExpired(Instant now) {
+        return expiresAt.isBefore(now);
+    }
+
+    public boolean isVerified() {
+        return verifiedAt != null;
     }
 }
