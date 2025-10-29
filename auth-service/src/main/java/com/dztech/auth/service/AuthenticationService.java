@@ -1,10 +1,13 @@
 package com.dztech.auth.service;
 
-import com.dztech.auth.dto.LoginRequest;
+import com.dztech.auth.client.OtpProviderClient;
 import com.dztech.auth.dto.LoginResponse;
+import com.dztech.auth.dto.OtpRequest;
+import com.dztech.auth.dto.OtpRequestResponse;
 import com.dztech.auth.dto.OtpVerificationRequest;
 import com.dztech.auth.dto.TokenRefreshRequest;
 import com.dztech.auth.dto.TokenRefreshResponse;
+import com.dztech.auth.model.AppId;
 import com.dztech.auth.model.User;
 import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.UserProfileRepository;
@@ -12,8 +15,8 @@ import com.dztech.auth.repository.UserRepository;
 import com.dztech.auth.security.JwtTokenService;
 import com.dztech.auth.security.JwtTokenService.JwtClaims;
 import com.dztech.auth.security.JwtTokenService.JwtTokenPayload;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,76 +26,47 @@ import org.springframework.util.StringUtils;
 @Service
 public class AuthenticationService {
 
-    private static final String STATIC_OTP_CODE = "123456";
     private static final String OTP_EMAIL_DOMAIN = "otp-auth.local";
 
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final JwtTokenService jwtTokenService;
+    private final OtpProviderClient otpProviderClient;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AuthenticationService(
             UserRepository userRepository,
             UserProfileRepository userProfileRepository,
-            JwtTokenService jwtTokenService) {
+            JwtTokenService jwtTokenService,
+            OtpProviderClient otpProviderClient) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
         this.jwtTokenService = jwtTokenService;
+        this.otpProviderClient = otpProviderClient;
     }
 
-    @Transactional
-    public LoginResponse login(LoginRequest request) {
-        User user = resolveUser(request.usernameOrEmail());
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("Invalid username/email or password");
-        }
-
-        String normalizedName = normalizeName(request.name());
+    @Transactional(readOnly = true)
+    public OtpRequestResponse requestOtp(OtpRequest request, AppId appId) {
         String normalizedPhone = normalizePhone(request.phone());
-        String normalizedEmail = normalizeEmail(user.getEmail());
-
-        boolean profileCreated = false;
-        UserProfile profile = userProfileRepository.findByUserId(user.getId()).orElse(null);
-        if (profile == null) {
-            profileCreated = true;
-            profile = UserProfile.builder()
-                    .userId(user.getId())
-                    .name(normalizedName)
-                    .phone(normalizedPhone)
-                    .email(normalizedEmail)
-                    .build();
-        } else {
-            profile.setName(normalizedName);
-            profile.setPhone(normalizedPhone);
-            profile.setEmail(normalizedEmail);
-        }
-
-        UserProfile savedProfile = userProfileRepository.save(profile);
-
-        TokenPair tokens = issueTokens(user, savedProfile);
-
-        return new LoginResponse(
-                true,
-                profileCreated,
-                tokens.accessToken(),
-                tokens.refreshToken(),
-                user.getId(),
-                savedProfile.getName(),
-                savedProfile.getPhone(),
-                savedProfile.getEmail());
+        otpProviderClient.sendOtp(normalizedPhone, appId);
+        return new OtpRequestResponse(true, "OTP sent successfully");
     }
 
     @Transactional
-    public LoginResponse verifyOtp(OtpVerificationRequest request) {
+    public LoginResponse verifyOtp(OtpVerificationRequest request, AppId appId) {
         String normalizedPhone = normalizePhone(request.phone());
         String normalizedOtp = normalizeOtp(request.otp());
 
-        if (!STATIC_OTP_CODE.equals(normalizedOtp)) {
-            throw new IllegalArgumentException("Invalid OTP");
-        }
+        otpProviderClient.verifyOtp(normalizedPhone, normalizedOtp);
 
         boolean newUser = false;
         UserProfile profile = userProfileRepository.findByPhone(normalizedPhone).orElse(null);
+        if (profile == null) {
+            String legacyPhone = legacyNormalizePhone(request.phone());
+            if (StringUtils.hasText(legacyPhone) && !legacyPhone.equals(normalizedPhone)) {
+                profile = userProfileRepository.findByPhone(legacyPhone).orElse(null);
+            }
+        }
         User user;
 
         if (profile != null) {
@@ -120,7 +94,7 @@ public class AuthenticationService {
             newUser = true;
         }
 
-        TokenPair tokens = issueTokens(user, profile);
+        TokenPair tokens = issueTokens(user, profile, appId);
 
         return new LoginResponse(
                 true,
@@ -146,7 +120,8 @@ public class AuthenticationService {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User profile is unavailable for this refresh token"));
 
-        TokenPair tokens = issueTokens(user, profile);
+        AppId appId = resolveAppIdFromClaims(claims);
+        TokenPair tokens = issueTokens(user, profile, appId);
 
         return new TokenRefreshResponse(
                 true,
@@ -158,49 +133,34 @@ public class AuthenticationService {
                 profile.getEmail());
     }
 
-    private TokenPair issueTokens(User user, UserProfile profile) {
+    private AppId resolveAppIdFromClaims(JwtClaims claims) {
+        Object rawAppId = claims.additionalClaims().get("appId");
+        if (rawAppId instanceof String appIdString) {
+            try {
+                return AppId.fromHeader(appIdString);
+            } catch (IllegalArgumentException ignored) {
+                // fall back to default if token contained unexpected value
+            }
+        }
+        return AppId.ALL;
+    }
+
+    private TokenPair issueTokens(User user, UserProfile profile, AppId appId) {
+        Map<String, Object> additionalClaims = new HashMap<>();
+        if (appId != null) {
+            additionalClaims.put("appId", appId.value());
+        }
         JwtTokenPayload payload = new JwtTokenPayload(
                 user.getId(),
                 user.getUsername(),
                 profile.getEmail(),
                 profile.getPhone(),
                 profile.getName(),
-                Map.of());
+                additionalClaims);
 
         String accessToken = jwtTokenService.generateAccessToken(payload);
         String refreshToken = jwtTokenService.generateRefreshToken(payload);
         return new TokenPair(accessToken, refreshToken);
-    }
-
-    private User resolveUser(String identifier) {
-        String normalized = normalizeIdentifier(identifier);
-        Optional<User> byUsername = userRepository.findByUsername(normalized);
-        if (byUsername.isPresent()) {
-            return byUsername.get();
-        }
-
-        Optional<User> byEmail = userRepository.findByEmail(normalized.toLowerCase());
-        if (byEmail.isPresent()) {
-            return byEmail.get();
-        }
-
-        throw new IllegalArgumentException("Invalid username/email or password");
-    }
-
-    private String normalizeIdentifier(String raw) {
-        String trimmed = raw == null ? "" : raw.trim();
-        if (!StringUtils.hasText(trimmed)) {
-            throw new IllegalArgumentException("Username or email is required");
-        }
-        return trimmed;
-    }
-
-    private String normalizeName(String rawName) {
-        String trimmed = rawName == null ? "" : rawName.trim();
-        if (!StringUtils.hasText(trimmed)) {
-            throw new IllegalArgumentException("Name is required");
-        }
-        return trimmed;
     }
 
     private String normalizePhone(String rawPhone) {
@@ -208,14 +168,16 @@ public class AuthenticationService {
         if (!StringUtils.hasText(trimmed)) {
             throw new IllegalArgumentException("Phone number is required");
         }
-        return trimmed;
+        String digitsOnly = trimmed.replaceAll("\\D", "");
+        if (!StringUtils.hasText(digitsOnly)) {
+            throw new IllegalArgumentException("Phone number must contain digits");
+        }
+        return digitsOnly;
     }
 
-    private String normalizeEmail(String rawEmail) {
-        if (!StringUtils.hasText(rawEmail)) {
-            throw new IllegalArgumentException("Email address is not configured for this user");
-        }
-        return rawEmail.trim().toLowerCase();
+    private String legacyNormalizePhone(String rawPhone) {
+        String trimmed = rawPhone == null ? "" : rawPhone.trim();
+        return StringUtils.hasText(trimmed) ? trimmed : null;
     }
 
     private String normalizeOtp(String rawOtp) {
