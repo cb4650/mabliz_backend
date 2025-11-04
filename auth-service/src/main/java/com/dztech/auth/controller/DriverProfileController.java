@@ -1,0 +1,99 @@
+package com.dztech.auth.controller;
+
+import com.dztech.auth.dto.DriverEmailOtpRequest;
+import com.dztech.auth.dto.DriverEmailOtpResponse;
+import com.dztech.auth.dto.DriverEmailVerificationRequest;
+import com.dztech.auth.dto.DriverEmailVerificationResponse;
+import com.dztech.auth.dto.DriverProfileResponse;
+import com.dztech.auth.dto.DriverProfileUpdateForm;
+import com.dztech.auth.dto.DriverProfileUpdateResponse;
+import com.dztech.auth.dto.DriverProfileView;
+import com.dztech.auth.exception.EmailOtpException;
+import com.dztech.auth.security.AuthenticatedUserProvider;
+import com.dztech.auth.service.DriverProfileService;
+import com.dztech.auth.service.DriverRegistrationService;
+import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/driver")
+public class DriverProfileController {
+
+    private final DriverRegistrationService driverRegistrationService;
+    private final DriverProfileService driverProfileService;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
+
+    public DriverProfileController(
+            DriverRegistrationService driverRegistrationService,
+            DriverProfileService driverProfileService,
+            AuthenticatedUserProvider authenticatedUserProvider) {
+        this.driverRegistrationService = driverRegistrationService;
+        this.driverProfileService = driverProfileService;
+        this.authenticatedUserProvider = authenticatedUserProvider;
+    }
+
+    @PostMapping("/email/otp")
+    public ResponseEntity<DriverEmailOtpResponse> requestEmailOtp(
+            Authentication authentication, @RequestBody @Valid DriverEmailOtpRequest request) {
+        try {
+            Long userId = authenticatedUserProvider.getCurrentUserId();
+            DriverEmailOtpResponse response = driverRegistrationService.requestEmailOtp(userId, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException ex) {
+            DriverEmailOtpResponse error =
+                    new DriverEmailOtpResponse(false, "Authentication is required", null);
+            return ResponseEntity.status(401).body(error);
+        } catch (IllegalArgumentException | EmailOtpException ex) {
+            DriverEmailOtpResponse error = new DriverEmailOtpResponse(false, ex.getMessage(), null);
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @PostMapping("/email/verify")
+    public ResponseEntity<DriverEmailVerificationResponse> verifyEmailOtp(
+            Authentication authentication, @RequestBody @Valid DriverEmailVerificationRequest request) {
+        try {
+            Long userId = authenticatedUserProvider.getCurrentUserId();
+            DriverEmailVerificationResponse response = driverRegistrationService.verifyEmailOtp(userId, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException ex) {
+            DriverEmailVerificationResponse error =
+                    new DriverEmailVerificationResponse(false, "Authentication is required", null);
+            return ResponseEntity.status(401).body(error);
+        } catch (IllegalArgumentException | EmailOtpException ex) {
+            DriverEmailVerificationResponse error = new DriverEmailVerificationResponse(false, ex.getMessage(), null);
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<DriverProfileResponse> getProfile(Authentication authentication) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        DriverProfileView profile = driverProfileService.getProfile(userId);
+        return ResponseEntity.ok(new DriverProfileResponse(true, profile));
+    }
+
+    @PutMapping(
+            value = "/profile",
+            consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    public ResponseEntity<DriverProfileUpdateResponse> updateProfile(
+            Authentication authentication, @Valid @ModelAttribute DriverProfileUpdateForm form) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        try {
+            DriverProfileView updated = driverProfileService.updateProfile(userId, form);
+            return ResponseEntity.ok(new DriverProfileUpdateResponse(true, "Profile updated successfully", updated));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest()
+                    .body(new DriverProfileUpdateResponse(false, ex.getMessage(), null));
+        }
+    }
+}
