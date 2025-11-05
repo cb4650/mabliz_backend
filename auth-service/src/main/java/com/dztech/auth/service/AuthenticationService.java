@@ -1,6 +1,8 @@
 package com.dztech.auth.service;
 
 import com.dztech.auth.client.OtpProviderClient;
+import com.dztech.auth.config.LoginProfileProperties;
+import com.dztech.auth.config.LoginProfileProperties.ProfileType;
 import com.dztech.auth.dto.LoginResponse;
 import com.dztech.auth.dto.OtpRequest;
 import com.dztech.auth.dto.OtpRequestResponse;
@@ -8,8 +10,10 @@ import com.dztech.auth.dto.OtpVerificationRequest;
 import com.dztech.auth.dto.TokenRefreshRequest;
 import com.dztech.auth.dto.TokenRefreshResponse;
 import com.dztech.auth.model.AppId;
+import com.dztech.auth.model.DriverProfile;
 import com.dztech.auth.model.User;
 import com.dztech.auth.model.UserProfile;
+import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.UserProfileRepository;
 import com.dztech.auth.repository.UserRepository;
 import com.dztech.auth.security.JwtTokenService;
@@ -30,19 +34,25 @@ public class AuthenticationService {
 
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final DriverProfileRepository driverProfileRepository;
     private final JwtTokenService jwtTokenService;
     private final OtpProviderClient otpProviderClient;
+    private final LoginProfileProperties loginProfileProperties;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AuthenticationService(
             UserRepository userRepository,
             UserProfileRepository userProfileRepository,
+            DriverProfileRepository driverProfileRepository,
             JwtTokenService jwtTokenService,
-            OtpProviderClient otpProviderClient) {
+            OtpProviderClient otpProviderClient,
+            LoginProfileProperties loginProfileProperties) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
+        this.driverProfileRepository = driverProfileRepository;
         this.jwtTokenService = jwtTokenService;
         this.otpProviderClient = otpProviderClient;
+        this.loginProfileProperties = loginProfileProperties;
     }
 
     @Transactional(readOnly = true)
@@ -59,10 +69,72 @@ public class AuthenticationService {
 
         otpProviderClient.verifyOtp(normalizedPhone, normalizedOtp);
 
+        ProfileResult profileResult = handleProfileForLogin(appId, normalizedPhone, request.phone());
+        TokenPair tokens = issueTokens(profileResult.user(), profileResult.profileData(), appId);
+
+        return new LoginResponse(
+                true,
+                profileResult.newUser(),
+                tokens.accessToken(),
+                tokens.refreshToken(),
+                profileResult.user().getId(),
+                profileResult.profileData().name(),
+                profileResult.profileData().phone(),
+                profileResult.profileData().email(),
+                profileResult.profileData().emailVerified());
+    }
+
+    public TokenRefreshResponse refreshToken(TokenRefreshRequest request) {
+        String normalizedRefreshToken = normalizeRefreshToken(request.refreshToken());
+        JwtClaims claims = jwtTokenService.parseRefreshToken(normalizedRefreshToken);
+        Long userId = claims.userId();
+        if (userId == null) {
+            throw new IllegalArgumentException("Refresh token is missing user id");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User account is unavailable for this refresh token"));
+
+        AppId appId = resolveAppIdFromClaims(claims);
+        ProfileData profileData = resolveProfileForRefresh(appId, user);
+        TokenPair tokens = issueTokens(user, profileData, appId);
+
+        return new TokenRefreshResponse(
+                true,
+                tokens.accessToken(),
+                tokens.refreshToken(),
+                user.getId(),
+                profileData.name(),
+                profileData.phone(),
+                profileData.email(),
+                profileData.emailVerified());
+    }
+
+    private AppId resolveAppIdFromClaims(JwtClaims claims) {
+        Object rawAppId = claims.additionalClaims().get("appId");
+        if (rawAppId instanceof String appIdString) {
+            try {
+                return AppId.fromHeader(appIdString);
+            } catch (IllegalArgumentException ignored) {
+                // fall back to default if token contained unexpected value
+            }
+        }
+        return AppId.ALL;
+    }
+
+    private ProfileResult handleProfileForLogin(AppId appId, String normalizedPhone, String rawPhone) {
+        ProfileType profileType = loginProfileProperties.resolve(appId);
+        return switch (profileType) {
+            case DRIVER -> handleDriverProfileLogin(normalizedPhone, rawPhone);
+            case USER -> handleUserProfileLogin(normalizedPhone, rawPhone);
+        };
+    }
+
+    private ProfileResult handleUserProfileLogin(String normalizedPhone, String rawPhone) {
         boolean newUser = false;
         UserProfile profile = userProfileRepository.findByPhone(normalizedPhone).orElse(null);
         if (profile == null) {
-            String legacyPhone = legacyNormalizePhone(request.phone());
+            String legacyPhone = legacyNormalizePhone(rawPhone);
             if (StringUtils.hasText(legacyPhone) && !legacyPhone.equals(normalizedPhone)) {
                 profile = userProfileRepository.findByPhone(legacyPhone).orElse(null);
             }
@@ -94,60 +166,95 @@ public class AuthenticationService {
             newUser = true;
         }
 
-        TokenPair tokens = issueTokens(user, profile, appId);
-
-        return new LoginResponse(
-                true,
-                newUser,
-                tokens.accessToken(),
-                tokens.refreshToken(),
-                user.getId(),
+        ProfileData profileData = new ProfileData(
                 profile.getName(),
                 profile.getPhone(),
                 profile.getEmail(),
                 profile.isEmailVerified());
+
+        return new ProfileResult(user, profileData, newUser);
     }
 
-    public TokenRefreshResponse refreshToken(TokenRefreshRequest request) {
-        String normalizedRefreshToken = normalizeRefreshToken(request.refreshToken());
-        JwtClaims claims = jwtTokenService.parseRefreshToken(normalizedRefreshToken);
-        Long userId = claims.userId();
-        if (userId == null) {
-            throw new IllegalArgumentException("Refresh token is missing user id");
-        }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User account is unavailable for this refresh token"));
-        UserProfile profile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User profile is unavailable for this refresh token"));
-
-        AppId appId = resolveAppIdFromClaims(claims);
-        TokenPair tokens = issueTokens(user, profile, appId);
-
-        return new TokenRefreshResponse(
-                true,
-                tokens.accessToken(),
-                tokens.refreshToken(),
-                user.getId(),
-                profile.getName(),
-                profile.getPhone(),
-                profile.getEmail(),
-                profile.isEmailVerified());
-    }
-
-    private AppId resolveAppIdFromClaims(JwtClaims claims) {
-        Object rawAppId = claims.additionalClaims().get("appId");
-        if (rawAppId instanceof String appIdString) {
-            try {
-                return AppId.fromHeader(appIdString);
-            } catch (IllegalArgumentException ignored) {
-                // fall back to default if token contained unexpected value
+    private ProfileResult handleDriverProfileLogin(String normalizedPhone, String rawPhone) {
+        boolean newUser = false;
+        DriverProfile profile = driverProfileRepository.findByPhone(normalizedPhone).orElse(null);
+        if (profile == null) {
+            String legacyPhone = legacyNormalizePhone(rawPhone);
+            if (StringUtils.hasText(legacyPhone) && !legacyPhone.equals(normalizedPhone)) {
+                profile = driverProfileRepository.findByPhone(legacyPhone).orElse(null);
             }
         }
-        return AppId.ALL;
+
+        User user;
+        if (profile != null) {
+            user = userRepository.findById(profile.getUserId())
+                    .orElseThrow(() -> new IllegalArgumentException("Driver account is unavailable for this phone number"));
+            boolean profileUpdated = false;
+            if (!StringUtils.hasText(profile.getPhone()) || !normalizedPhone.equals(profile.getPhone())) {
+                profile.setPhone(normalizedPhone);
+                profileUpdated = true;
+            }
+            if (!StringUtils.hasText(profile.getFullName())) {
+                profile.setFullName(defaultNameFromPhone(normalizedPhone));
+                profileUpdated = true;
+            }
+            if (!StringUtils.hasText(profile.getEmail())) {
+                profile.setEmail(user.getEmail());
+                profileUpdated = true;
+            }
+            if (profileUpdated) {
+                profile = driverProfileRepository.save(profile);
+            }
+        } else {
+            user = createUserForPhone(normalizedPhone);
+            profile = createDriverProfileForUser(user, normalizedPhone);
+            newUser = true;
+        }
+
+        boolean emailVerified = userProfileRepository.findByUserId(user.getId())
+                .map(UserProfile::isEmailVerified)
+                .orElse(false);
+
+        String name = StringUtils.hasText(profile.getFullName())
+                ? profile.getFullName()
+                : defaultNameFromPhone(normalizedPhone);
+        String phone = StringUtils.hasText(profile.getPhone()) ? profile.getPhone() : normalizedPhone;
+        String email = StringUtils.hasText(profile.getEmail()) ? profile.getEmail() : user.getEmail();
+
+        ProfileData profileData = new ProfileData(name, phone, email, emailVerified);
+        return new ProfileResult(user, profileData, newUser);
     }
 
-    private TokenPair issueTokens(User user, UserProfile profile, AppId appId) {
+    private ProfileData resolveProfileForRefresh(AppId appId, User user) {
+        ProfileType profileType = loginProfileProperties.resolve(appId);
+        return switch (profileType) {
+            case DRIVER -> resolveDriverProfileData(user);
+            case USER -> resolveUserProfileData(user);
+        };
+    }
+
+    private ProfileData resolveUserProfileData(User user) {
+        UserProfile profile = userProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("User profile is unavailable for this refresh token"));
+        return new ProfileData(
+                profile.getName(), profile.getPhone(), profile.getEmail(), profile.isEmailVerified());
+    }
+
+    private ProfileData resolveDriverProfileData(User user) {
+        DriverProfile profile = driverProfileRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Driver profile is unavailable for this refresh token"));
+        boolean emailVerified = userProfileRepository.findByUserId(user.getId())
+                .map(UserProfile::isEmailVerified)
+                .orElse(false);
+        String phone = StringUtils.hasText(profile.getPhone()) ? profile.getPhone() : "";
+        String name = StringUtils.hasText(profile.getFullName())
+                ? profile.getFullName()
+                : (StringUtils.hasText(phone) ? defaultNameFromPhone(phone) : defaultNameFromPhone(user.getUsername()));
+        String email = StringUtils.hasText(profile.getEmail()) ? profile.getEmail() : user.getEmail();
+        return new ProfileData(name, phone, email, emailVerified);
+    }
+
+    private TokenPair issueTokens(User user, ProfileData profile, AppId appId) {
         Map<String, Object> additionalClaims = new HashMap<>();
         if (appId != null) {
             additionalClaims.put("appId", appId.value());
@@ -155,9 +262,9 @@ public class AuthenticationService {
         JwtTokenPayload payload = new JwtTokenPayload(
                 user.getId(),
                 user.getUsername(),
-                profile.getEmail(),
-                profile.getPhone(),
-                profile.getName(),
+                profile.email(),
+                profile.phone(),
+                profile.name(),
                 additionalClaims);
 
         String accessToken = jwtTokenService.generateAccessToken(payload);
@@ -224,6 +331,16 @@ public class AuthenticationService {
         return userProfileRepository.save(profile);
     }
 
+    private DriverProfile createDriverProfileForUser(User user, String phone) {
+        DriverProfile profile = DriverProfile.builder()
+                .userId(user.getId())
+                .fullName(defaultNameFromPhone(phone))
+                .phone(phone)
+                .email(user.getEmail())
+                .build();
+        return driverProfileRepository.save(profile);
+    }
+
     private String sanitizeForIdentifier(String phone) {
         String digits = phone.replaceAll("\\D", "");
         if (StringUtils.hasText(digits)) {
@@ -285,6 +402,9 @@ public class AuthenticationService {
         return "Guest " + phone;
     }
 
-    private record TokenPair(String accessToken, String refreshToken) {
-    }
+    private record ProfileResult(User user, ProfileData profileData, boolean newUser) {}
+
+    private record ProfileData(String name, String phone, String email, boolean emailVerified) {}
+
+    private record TokenPair(String accessToken, String refreshToken) {}
 }
