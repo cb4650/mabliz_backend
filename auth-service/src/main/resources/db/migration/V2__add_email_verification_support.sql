@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
     verified_at TIMESTAMP NULL,
-    CONSTRAINT fk_email_verification_tokens_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    CONSTRAINT fk_email_verification_tokens_user FOREIGN KEY (user_id) REFERENCES user_profiles (user_id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_email_verification_tokens_user_email
