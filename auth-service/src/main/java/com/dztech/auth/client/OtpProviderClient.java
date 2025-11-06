@@ -13,6 +13,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
+import com.google.gson.Gson;
 
 @Component
 public class OtpProviderClient {
@@ -21,6 +22,7 @@ public class OtpProviderClient {
     private final String baseUrl;
     private final String apiKey;
     private final String smsTemplate;
+    Gson gson = new Gson();
 
     public OtpProviderClient(
             RestTemplateBuilder restTemplateBuilder,
@@ -64,6 +66,7 @@ public class OtpProviderClient {
                 .encode()
                 .toUri();
         OtpProviderResponse response = execute(uri);
+        System.out.println(gson.toJson(response));
         ensureSuccess(response, "Failed to verify OTP: ");
     }
 

@@ -1,5 +1,6 @@
 package com.dztech.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDate;
 
 public record DriverProfileView(
@@ -8,6 +9,8 @@ public record DriverProfileView(
         LocalDate dob,
         String gender,
         String email,
+        @JsonProperty("isEmailVerified")
+        boolean emailVerified,
         String phone,
         String emergencyContactName,
         String emergencyContactNumber,

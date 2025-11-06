@@ -4,7 +4,9 @@ import com.dztech.auth.dto.DriverProfileUpdateForm;
 import com.dztech.auth.dto.DriverProfileView;
 import com.dztech.auth.exception.ResourceNotFoundException;
 import com.dztech.auth.model.DriverProfile;
+import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.DriverProfileRepository;
+import com.dztech.auth.repository.UserProfileRepository;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -22,11 +24,15 @@ public class DriverProfileService {
 
     private final DriverProfileRepository driverProfileRepository;
     private final DriverEmailOtpService driverEmailOtpService;
+    private final UserProfileRepository userProfileRepository;
 
     public DriverProfileService(
-            DriverProfileRepository driverProfileRepository, DriverEmailOtpService driverEmailOtpService) {
+            DriverProfileRepository driverProfileRepository,
+            DriverEmailOtpService driverEmailOtpService,
+            UserProfileRepository userProfileRepository) {
         this.driverProfileRepository = driverProfileRepository;
         this.driverEmailOtpService = driverEmailOtpService;
+        this.userProfileRepository = userProfileRepository;
     }
 
     @Transactional(readOnly = true)
@@ -143,12 +149,18 @@ public class DriverProfileService {
     }
 
     private DriverProfileView toView(DriverProfile profile) {
+        boolean emailVerified = userProfileRepository
+                .findByUserId(profile.getUserId())
+                .map(UserProfile::isEmailVerified)
+                .orElse(false);
+
         return new DriverProfileView(
                 profile.getUserId(),
                 profile.getFullName(),
                 profile.getDateOfBirth(),
                 profile.getGender(),
                 profile.getEmail(),
+                emailVerified,
                 profile.getPhone(),
                 profile.getEmergencyContactName(),
                 profile.getEmergencyContactNumber(),
