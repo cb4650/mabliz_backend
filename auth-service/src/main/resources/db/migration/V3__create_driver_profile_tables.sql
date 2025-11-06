@@ -25,8 +25,7 @@ CREATE TABLE IF NOT EXISTS driver_profiles (
     gov_id_back LONGBLOB NULL,
     gov_id_back_content_type VARCHAR(100) NULL,
     created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
-    CONSTRAINT fk_driver_profiles_user FOREIGN KEY (user_id) REFERENCES user_profiles (user_id) ON DELETE CASCADE
+    updated_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS driver_email_verification_tokens (
@@ -42,3 +41,4 @@ CREATE TABLE IF NOT EXISTS driver_email_verification_tokens (
 
 CREATE UNIQUE INDEX idx_driver_email_verification_tokens_email
     ON driver_email_verification_tokens (email);
+
