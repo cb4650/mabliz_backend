@@ -6,6 +6,7 @@ import com.dztech.auth.dto.DriverEmailVerificationRequest;
 import com.dztech.auth.dto.DriverEmailVerificationResponse;
 import com.dztech.auth.model.DriverEmailVerificationToken;
 import com.dztech.auth.model.DriverProfile;
+import com.dztech.auth.model.DriverProfileStatus;
 import com.dztech.auth.model.User;
 import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.DriverProfileRepository;
@@ -134,6 +135,7 @@ public class DriverRegistrationService {
                 .userId(userId)
                 .fullName(StringUtils.hasText(name) ? name : defaultNameFromEmail(email))
                 .email(email)
+                .status(DriverProfileStatus.PENDING)
                 .build();
     }
 
@@ -165,4 +167,3 @@ public class DriverRegistrationService {
         return local.substring(0, 1).toUpperCase() + local.substring(1);
     }
 }
-

@@ -8,4 +8,3 @@ public record OtpRequest(
         @Size(max = 25, message = "Phone number must be at most 25 characters")
         String phone) {
 }
-

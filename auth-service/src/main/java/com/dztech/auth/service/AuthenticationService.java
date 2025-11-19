@@ -11,6 +11,7 @@ import com.dztech.auth.dto.TokenRefreshRequest;
 import com.dztech.auth.dto.TokenRefreshResponse;
 import com.dztech.auth.model.AppId;
 import com.dztech.auth.model.DriverProfile;
+import com.dztech.auth.model.DriverProfileStatus;
 import com.dztech.auth.model.User;
 import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.DriverProfileRepository;
@@ -58,8 +59,12 @@ public class AuthenticationService {
     @Transactional(readOnly = true)
     public OtpRequestResponse requestOtp(OtpRequest request, AppId appId) {
         String normalizedPhone = normalizePhone(request.phone());
+
+        // Check if user is new (no existing profile)
+        boolean newUser = isNewUser(normalizedPhone, appId);
+
         otpProviderClient.sendOtp(normalizedPhone, appId);
-        return new OtpRequestResponse(true, "OTP sent successfully");
+        return new OtpRequestResponse(true, "OTP sent successfully", newUser);
     }
 
     @Transactional
@@ -337,6 +342,7 @@ public class AuthenticationService {
                 .fullName(defaultNameFromPhone(phone))
                 .phone(phone)
                 .email(user.getEmail())
+                .status(DriverProfileStatus.PENDING)
                 .build();
         return driverProfileRepository.save(profile);
     }
@@ -392,6 +398,14 @@ public class AuthenticationService {
             candidate = truncatedBase + suffix + "@" + OTP_EMAIL_DOMAIN;
         }
         return candidate;
+    }
+
+    private boolean isNewUser(String normalizedPhone, AppId appId) {
+        ProfileType profileType = loginProfileProperties.resolve(appId);
+        return switch (profileType) {
+            case DRIVER -> driverProfileRepository.findByPhone(normalizedPhone).isEmpty();
+            case USER -> userProfileRepository.findByPhone(normalizedPhone).isEmpty();
+        };
     }
 
     private String defaultNameFromPhone(String phone) {

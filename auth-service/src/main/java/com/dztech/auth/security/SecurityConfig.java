@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/register").permitAll()
                         .requestMatchers("/api/admin/login").permitAll()
                         .requestMatchers("/api/admin/otp/request").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/driver/email/otp", "/api/driver/email/verify").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

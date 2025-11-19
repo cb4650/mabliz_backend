@@ -2,6 +2,8 @@ package com.dztech.auth.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -112,6 +114,10 @@ public class DriverProfile {
     @Column(name = "gov_id_back_content_type", length = 100)
     private String govIdBackContentType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private DriverProfileStatus status;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -123,6 +129,9 @@ public class DriverProfile {
         Instant now = Instant.now();
         this.createdAt = now;
         this.updatedAt = now;
+        if (this.status == null) {
+            this.status = DriverProfileStatus.PENDING;
+        }
     }
 
     @PreUpdate

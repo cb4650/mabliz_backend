@@ -12,6 +12,7 @@ import com.dztech.auth.dto.DriverEmailVerificationRequest;
 import com.dztech.auth.dto.DriverEmailVerificationResponse;
 import com.dztech.auth.model.DriverEmailVerificationToken;
 import com.dztech.auth.model.DriverProfile;
+import com.dztech.auth.model.DriverProfileStatus;
 import com.dztech.auth.model.User;
 import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.DriverProfileRepository;
@@ -73,7 +74,8 @@ class DriverRegistrationServiceTest {
         Long userId = 5L;
         DriverEmailOtpRequest request = new DriverEmailOtpRequest("Mugil", "mugil@example.com");
         when(driverProfileRepository.findByEmail("mugil@example.com"))
-                .thenReturn(Optional.of(DriverProfile.builder().userId(1L).build()));
+                .thenReturn(Optional.of(
+                        DriverProfile.builder().userId(1L).status(DriverProfileStatus.PENDING).build()));
 
         assertThatThrownBy(() -> driverRegistrationService.requestEmailOtp(userId, request))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -96,6 +98,7 @@ class DriverRegistrationServiceTest {
                 .userId(5L)
                 .email("mugil@example.com")
                 .fullName("Mugil M")
+                .status(DriverProfileStatus.PENDING)
                 .build();
 
         when(driverEmailOtpService.verifyOtp(userId, "mugil@example.com", "123456")).thenReturn(token);

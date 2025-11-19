@@ -39,12 +39,10 @@ public class AdminService {
         String normalizedPhone = normalizePhone(request.phone());
 
         // Check if admin exists with this phone number
-        if (!adminRepository.existsByPhone(normalizedPhone)) {
-            throw new IllegalArgumentException("Admin account not found for this phone number");
-        }
+        boolean newUser = !adminRepository.existsByPhone(normalizedPhone);
 
         otpProviderClient.sendOtp(normalizedPhone, appId);
-        return new OtpRequestResponse(true, "OTP sent successfully");
+        return new OtpRequestResponse(true, "OTP sent successfully", newUser);
     }
 
     @Transactional

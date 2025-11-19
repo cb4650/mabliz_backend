@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.dztech.auth.dto.DriverProfileUpdateForm;
 import com.dztech.auth.dto.DriverProfileView;
 import com.dztech.auth.model.DriverProfile;
+import com.dztech.auth.model.DriverProfileStatus;
 import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.UserProfileRepository;
@@ -50,6 +51,7 @@ class DriverProfileServiceTest {
                 .userId(10L)
                 .fullName("John Doe")
                 .email("john@example.com")
+                .status(DriverProfileStatus.PENDING)
                 .build();
         when(driverProfileRepository.findById(10L)).thenReturn(Optional.of(profile));
         when(userProfileRepository.findByUserId(10L))
@@ -74,6 +76,7 @@ class DriverProfileServiceTest {
                 .userId(10L)
                 .fullName("Old Name")
                 .email("old@example.com")
+                .status(DriverProfileStatus.PENDING)
                 .build();
 
         when(driverProfileRepository.findById(10L)).thenReturn(Optional.of(profile));
@@ -115,6 +118,7 @@ class DriverProfileServiceTest {
                 .userId(10L)
                 .fullName("Driver")
                 .email("driver@example.com")
+                .status(DriverProfileStatus.PENDING)
                 .build();
 
         when(driverProfileRepository.findById(10L)).thenReturn(Optional.of(profile));
@@ -137,6 +141,7 @@ class DriverProfileServiceTest {
                 .userId(10L)
                 .fullName("Driver")
                 .email("driver@example.com")
+                .status(DriverProfileStatus.PENDING)
                 .build();
 
         when(driverProfileRepository.findById(10L)).thenReturn(Optional.of(profile));
@@ -159,11 +164,16 @@ class DriverProfileServiceTest {
                 .userId(10L)
                 .fullName("Old Name")
                 .email("old@example.com")
+                .status(DriverProfileStatus.PENDING)
                 .build();
 
         when(driverProfileRepository.findById(10L)).thenReturn(Optional.of(profile));
         when(driverProfileRepository.findByEmail("existing@example.com"))
-                .thenReturn(Optional.of(DriverProfile.builder().userId(20L).email("existing@example.com").build()));
+                .thenReturn(Optional.of(DriverProfile.builder()
+                        .userId(20L)
+                        .email("existing@example.com")
+                        .status(DriverProfileStatus.PENDING)
+                        .build()));
 
         DriverProfileUpdateForm form = new DriverProfileUpdateForm();
         form.setEmail("existing@example.com");

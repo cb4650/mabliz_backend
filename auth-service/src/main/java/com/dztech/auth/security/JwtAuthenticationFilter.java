@@ -6,7 +6,12 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -48,7 +53,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     claims.phone(),
                     claims.name(),
                     claims.additionalClaims());
-            JwtAuthenticationToken authentication = new JwtAuthenticationToken(userDetails, token);
+            Collection<? extends GrantedAuthority> authorities = extractAuthorities(claims);
+            JwtAuthenticationToken authentication = new JwtAuthenticationToken(userDetails, token, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
         } catch (UnsupportedJwtException ex) {
             filterChain.doFilter(request, response);
@@ -59,5 +65,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private Collection<? extends GrantedAuthority> extractAuthorities(JwtTokenService.JwtClaims claims) {
+        Object roleClaim = claims.additionalClaims().get("role");
+        if (roleClaim instanceof String role && StringUtils.hasText(role)) {
+            String normalized = role.trim().toUpperCase(Locale.ROOT);
+            return List.of(new SimpleGrantedAuthority("ROLE_" + normalized));
+        }
+        return List.of();
     }
 }
