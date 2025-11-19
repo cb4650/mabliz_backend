@@ -1,6 +1,8 @@
 package com.dztech.auth.model;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -14,6 +16,7 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -41,7 +44,7 @@ public class DriverProfile {
     private String fullName;
 
     @Column(name = "dob")
-    private LocalDate dateOfBirth;
+    private String dob;
 
     @Column(length = 20)
     private String gender;
@@ -61,23 +64,56 @@ public class DriverProfile {
     @Column(name = "permanent_address", length = 255)
     private String permanentAddress;
 
-    @Column(length = 255)
-    private String languages;
+    @ElementCollection
+    @CollectionTable(name = "driver_languages", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "language")
+    private List<String> languages;
 
     @Column(name = "license_number", length = 50)
     private String licenseNumber;
 
-    @Column(name = "license_type", length = 50)
-    private String licenseType;
+    @ElementCollection
+    @CollectionTable(name = "driver_license_types", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "license_type")
+    private List<String> licenseType;
 
-    @Column(name = "experience_years")
-    private Integer experienceYears;
+    @Column(name = "experience")
+    private String experience;
 
     @Column(name = "gov_id_type", length = 50)
     private String govIdType;
 
     @Column(name = "gov_id_number", length = 100)
     private String govIdNumber;
+
+    @Column(name = "current_address", length = 255)
+    private String currentAddress;
+
+    @Column(name = "mother_tongue", length = 50)
+    private String motherTongue;
+
+    @Column(name = "relationship", length = 50)
+    private String relationship;
+
+    @Column(name = "batch", length = 50)
+    private String batch;
+
+    @Column(name = "expiry_date")
+    private String expiryDate;
+
+    @ElementCollection
+    @CollectionTable(name = "driver_transmissions", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "transmission")
+    private List<String> transmission;
+
+    @Column(name = "expiry_date_kyc")
+    private String expiryDateKyc;
+
+    @Column(name = "blood_group", length = 10)
+    private String bloodGroup;
+
+    @Column(name = "qualification", length = 50)
+    private String qualification;
 
     @Lob
     @Column(name = "profile_photo", columnDefinition = "LONGBLOB")

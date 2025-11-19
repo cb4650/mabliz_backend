@@ -1,12 +1,12 @@
 package com.dztech.auth.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.time.LocalDate;
+import java.util.List;
 
 public record DriverProfileView(
         Long userId,
         String fullName,
-        LocalDate dob,
+        String dob,
         String gender,
         String email,
         @JsonProperty("isEmailVerified")
@@ -15,10 +15,19 @@ public record DriverProfileView(
         String emergencyContactName,
         String emergencyContactNumber,
         String permanentAddress,
-        String languages,
+        String currentAddress,
+        String motherTongue,
+        String relationship,
+        List<String> languages,
         String licenseNumber,
-        String licenseType,
-        Integer experienceYears,
+        List<String> licenseType,
+        String batch,
+        String expiryDate,
+        List<String> transmission,
+        String experience,
         String govIdType,
-        String govIdNumber) {
+        String govIdNumber,
+        String expiryDateKyc,
+        String bloodGroup,
+        String qualification) {
 }

@@ -64,7 +64,9 @@ public class DriverProfileService {
                 emailChanged = true;
             }
         }
-        profile.setDateOfBirth(parseDate(form.getDob(), profile.getDateOfBirth()));
+        if (StringUtils.hasText(form.getDob())) {
+            profile.setDob(form.getDob().trim());
+        }
         if (StringUtils.hasText(form.getGender())) {
             profile.setGender(form.getGender().trim());
         }
@@ -80,23 +82,50 @@ public class DriverProfileService {
         if (StringUtils.hasText(form.getPermanentAddress())) {
             profile.setPermanentAddress(form.getPermanentAddress().trim());
         }
-        if (StringUtils.hasText(form.getLanguages())) {
-            profile.setLanguages(form.getLanguages().trim());
+        if (StringUtils.hasText(form.getCurrentAddress())) {
+            profile.setCurrentAddress(form.getCurrentAddress().trim());
+        }
+        if (StringUtils.hasText(form.getMotherTongue())) {
+            profile.setMotherTongue(form.getMotherTongue().trim());
+        }
+        if (StringUtils.hasText(form.getRelationship())) {
+            profile.setRelationship(form.getRelationship().trim());
+        }
+        if (form.getLanguages() != null && !form.getLanguages().isEmpty()) {
+            profile.setLanguages(form.getLanguages());
         }
         if (StringUtils.hasText(form.getLicenseNumber())) {
             profile.setLicenseNumber(form.getLicenseNumber().trim());
         }
-        if (StringUtils.hasText(form.getLicenseType())) {
-            profile.setLicenseType(form.getLicenseType().trim());
+        if (form.getLicenseType() != null && !form.getLicenseType().isEmpty()) {
+            profile.setLicenseType(form.getLicenseType());
+        }
+        if (StringUtils.hasText(form.getBatch())) {
+            profile.setBatch(form.getBatch().trim());
+        }
+        if (StringUtils.hasText(form.getExpiryDate())) {
+            profile.setExpiryDate(form.getExpiryDate().trim());
+        }
+        if (form.getTransmission() != null && !form.getTransmission().isEmpty()) {
+            profile.setTransmission(form.getTransmission());
         }
         if (StringUtils.hasText(form.getExperience())) {
-            profile.setExperienceYears(parseExperience(form.getExperience(), profile.getExperienceYears()));
+            profile.setExperience(form.getExperience().trim());
         }
         if (StringUtils.hasText(form.getGovIdType())) {
             profile.setGovIdType(form.getGovIdType().trim());
         }
         if (StringUtils.hasText(form.getGovIdNumber())) {
             profile.setGovIdNumber(form.getGovIdNumber().trim());
+        }
+        if (StringUtils.hasText(form.getExpiryDateKyc())) {
+            profile.setExpiryDateKyc(form.getExpiryDateKyc().trim());
+        }
+        if (StringUtils.hasText(form.getBloodGroup())) {
+            profile.setBloodGroup(form.getBloodGroup().trim());
+        }
+        if (StringUtils.hasText(form.getQualification())) {
+            profile.setQualification(form.getQualification().trim());
         }
 
         if (form.getProfilePhoto() != null && !form.getProfilePhoto().isEmpty()) {
@@ -157,7 +186,7 @@ public class DriverProfileService {
         return new DriverProfileView(
                 profile.getUserId(),
                 profile.getFullName(),
-                profile.getDateOfBirth(),
+                profile.getDob(),
                 profile.getGender(),
                 profile.getEmail(),
                 emailVerified,
@@ -165,12 +194,21 @@ public class DriverProfileService {
                 profile.getEmergencyContactName(),
                 profile.getEmergencyContactNumber(),
                 profile.getPermanentAddress(),
+                profile.getCurrentAddress(),
+                profile.getMotherTongue(),
+                profile.getRelationship(),
                 profile.getLanguages(),
                 profile.getLicenseNumber(),
                 profile.getLicenseType(),
-                profile.getExperienceYears(),
+                profile.getBatch(),
+                profile.getExpiryDate(),
+                profile.getTransmission(),
+                profile.getExperience(),
                 profile.getGovIdType(),
-                profile.getGovIdNumber());
+                profile.getGovIdNumber(),
+                profile.getExpiryDateKyc(),
+                profile.getBloodGroup(),
+                profile.getQualification());
     }
 
     private LocalDate parseDate(String dob, LocalDate fallback) {

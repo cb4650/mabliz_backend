@@ -3,6 +3,7 @@ package com.dztech.auth.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 public class DriverProfileUpdateForm {
 
@@ -30,14 +31,28 @@ public class DriverProfileUpdateForm {
     @Size(max = 255, message = "Permanent address must be at most 255 characters")
     private String permanentAddress;
 
-    @Size(max = 255, message = "Languages must be at most 255 characters")
-    private String languages;
+    @Size(max = 255, message = "Current address must be at most 255 characters")
+    private String currentAddress;
+
+    @Size(max = 50, message = "Mother tongue must be at most 50 characters")
+    private String motherTongue;
+
+    @Size(max = 50, message = "Relationship must be at most 50 characters")
+    private String relationship;
+
+    private List<String> languages;
 
     @Size(max = 50, message = "License number must be at most 50 characters")
     private String licenseNumber;
 
-    @Size(max = 50, message = "License type must be at most 50 characters")
-    private String licenseType;
+    private List<String> licenseType;
+
+    @Size(max = 50, message = "Batch must be at most 50 characters")
+    private String batch;
+
+    private String expiryDate;
+
+    private List<String> transmission;
 
     private String experience;
 
@@ -46,6 +61,14 @@ public class DriverProfileUpdateForm {
 
     @Size(max = 100, message = "Government ID number must be at most 100 characters")
     private String govIdNumber;
+
+    private String expiryDateKyc;
+
+    @Size(max = 10, message = "Blood group must be at most 10 characters")
+    private String bloodGroup;
+
+    @Size(max = 50, message = "Qualification must be at most 50 characters")
+    private String qualification;
 
     private MultipartFile profilePhoto;
     private MultipartFile licenseFront;
@@ -117,11 +140,35 @@ public class DriverProfileUpdateForm {
         this.permanentAddress = permanentAddress;
     }
 
-    public String getLanguages() {
+    public String getCurrentAddress() {
+        return currentAddress;
+    }
+
+    public void setCurrentAddress(String currentAddress) {
+        this.currentAddress = currentAddress;
+    }
+
+    public String getMotherTongue() {
+        return motherTongue;
+    }
+
+    public void setMotherTongue(String motherTongue) {
+        this.motherTongue = motherTongue;
+    }
+
+    public String getRelationship() {
+        return relationship;
+    }
+
+    public void setRelationship(String relationship) {
+        this.relationship = relationship;
+    }
+
+    public List<String> getLanguages() {
         return languages;
     }
 
-    public void setLanguages(String languages) {
+    public void setLanguages(List<String> languages) {
         this.languages = languages;
     }
 
@@ -133,12 +180,36 @@ public class DriverProfileUpdateForm {
         this.licenseNumber = licenseNumber;
     }
 
-    public String getLicenseType() {
+    public List<String> getLicenseType() {
         return licenseType;
     }
 
-    public void setLicenseType(String licenseType) {
+    public void setLicenseType(List<String> licenseType) {
         this.licenseType = licenseType;
+    }
+
+    public String getBatch() {
+        return batch;
+    }
+
+    public void setBatch(String batch) {
+        this.batch = batch;
+    }
+
+    public String getExpiryDate() {
+        return expiryDate;
+    }
+
+    public void setExpiryDate(String expiryDate) {
+        this.expiryDate = expiryDate;
+    }
+
+    public List<String> getTransmission() {
+        return transmission;
+    }
+
+    public void setTransmission(List<String> transmission) {
+        this.transmission = transmission;
     }
 
     public String getExperience() {
@@ -163,6 +234,30 @@ public class DriverProfileUpdateForm {
 
     public void setGovIdNumber(String govIdNumber) {
         this.govIdNumber = govIdNumber;
+    }
+
+    public String getExpiryDateKyc() {
+        return expiryDateKyc;
+    }
+
+    public void setExpiryDateKyc(String expiryDateKyc) {
+        this.expiryDateKyc = expiryDateKyc;
+    }
+
+    public String getBloodGroup() {
+        return bloodGroup;
+    }
+
+    public void setBloodGroup(String bloodGroup) {
+        this.bloodGroup = bloodGroup;
+    }
+
+    public String getQualification() {
+        return qualification;
+    }
+
+    public void setQualification(String qualification) {
+        this.qualification = qualification;
     }
 
     public MultipartFile getProfilePhoto() {

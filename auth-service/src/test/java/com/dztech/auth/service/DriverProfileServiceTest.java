@@ -15,7 +15,7 @@ import com.dztech.auth.model.DriverProfileStatus;
 import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.UserProfileRepository;
-import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -97,7 +97,7 @@ class DriverProfileServiceTest {
         form.setDob("1990-05-20");
         form.setGender("Male");
         form.setPhone("9876543210");
-        form.setLanguages("English,Tamil");
+        form.setLanguages(List.of("English", "Tamil"));
         form.setExperience("5");
         form.setProfilePhoto(new MockMultipartFile("profilePhoto", "photo.jpg", "image/jpeg", new byte[] {1, 2}));
 
@@ -107,8 +107,8 @@ class DriverProfileServiceTest {
         assertThat(view.email()).isEqualTo("new@example.com");
         assertThat(view.emailVerified()).isTrue();
         assertThat(profile.getProfilePhoto()).containsExactly(1, 2);
-        assertThat(profile.getDateOfBirth()).isEqualTo(LocalDate.of(1990, 5, 20));
-        assertThat(profile.getExperienceYears()).isEqualTo(5);
+        assertThat(profile.getDob()).isEqualTo("1990-05-20");
+        assertThat(profile.getExperience()).isEqualTo("5");
         verify(driverEmailOtpService).sendOtp(10L, "new@example.com", "New Name");
     }
 
