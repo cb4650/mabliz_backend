@@ -2,12 +2,15 @@ package com.dztech.auth.controller;
 
 import com.dztech.auth.dto.AdminDriverDetailResponse;
 import com.dztech.auth.dto.AdminDriverListResponse;
+import com.dztech.auth.dto.DriverBulkFieldVerificationRequest;
+import com.dztech.auth.dto.DriverBulkFieldVerificationResponse;
 import com.dztech.auth.dto.DriverFieldVerificationRequest;
 import com.dztech.auth.dto.DriverFieldVerificationResponse;
 import com.dztech.auth.dto.DriverFieldVerificationView;
 import com.dztech.auth.security.AdminAuthenticatedUserProvider;
 import com.dztech.auth.service.AdminDriverManagementService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,5 +49,17 @@ public class AdminDriverManagementController {
         Long adminId = adminAuthenticatedUserProvider.getCurrentAdminId();
         DriverFieldVerificationView view = driverManagementService.verifyField(adminId, driverId, request);
         return ResponseEntity.ok(new DriverFieldVerificationResponse(true, "Driver field updated", view));
+    }
+
+    @PostMapping("/{driverId}/bulk-verify")
+    public ResponseEntity<DriverBulkFieldVerificationResponse> bulkVerifyFields(
+            @PathVariable Long driverId, @Valid @RequestBody DriverBulkFieldVerificationRequest request) {
+        if (!request.driverId().equals(driverId)) {
+            return ResponseEntity.badRequest().body(new DriverBulkFieldVerificationResponse(false, "Driver ID mismatch", List.of()));
+        }
+
+        Long adminId = adminAuthenticatedUserProvider.getCurrentAdminId();
+        DriverBulkFieldVerificationResponse response = driverManagementService.bulkVerifyFields(adminId, request);
+        return ResponseEntity.ok(response);
     }
 }

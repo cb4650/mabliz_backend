@@ -3,6 +3,8 @@ package com.dztech.auth.service;
 import com.dztech.auth.dto.AdminDriverDetailResponse;
 import com.dztech.auth.dto.AdminDriverListItem;
 import com.dztech.auth.dto.AdminDriverListResponse;
+import com.dztech.auth.dto.DriverBulkFieldVerificationRequest;
+import com.dztech.auth.dto.DriverBulkFieldVerificationResponse;
 import com.dztech.auth.dto.DriverDocumentView;
 import com.dztech.auth.dto.DriverFieldVerificationRequest;
 import com.dztech.auth.dto.DriverFieldVerificationView;
@@ -18,6 +20,7 @@ import com.dztech.auth.repository.DriverFieldVerificationRepository;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.DriverVehicleRepository;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
@@ -80,11 +83,10 @@ public class AdminDriverManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
 
         List<DriverVehicle> vehicles = driverVehicleRepository.findByUserIdOrderByCreatedAtDesc(driverId);
-        List<DriverFieldVerification> verifications = driverFieldVerificationRepository.findByDriverId(driverId);
+        List<DriverFieldVerificationView> verificationViews = getAllFieldVerifications(driverId);
 
         DriverProfileDetailView profileView = toProfileDetailView(profile);
         List<DriverVehicleDetailView> vehicleViews = vehicles.stream().map(this::toVehicleDetailView).toList();
-        List<DriverFieldVerificationView> verificationViews = toFieldViews(verifications);
 
         return new AdminDriverDetailResponse(
                 true, profile.getUserId(), profile.getStatus(), profileView, vehicleViews, verificationViews);
@@ -124,6 +126,47 @@ public class AdminDriverManagementService {
         }
 
         return toFieldView(saved);
+    }
+
+    @Transactional
+    public DriverBulkFieldVerificationResponse bulkVerifyFields(
+            Long adminId, DriverBulkFieldVerificationRequest request) {
+        Long driverId = request.driverId();
+
+        DriverProfile profile = driverProfileRepository
+                .findById(driverId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
+
+        List<DriverFieldVerification> savedVerifications = request.verifications().stream()
+                .map(fieldReq -> {
+                    String fieldName = normalizeFieldName(fieldReq.fieldName());
+                    DriverFieldVerificationStatus status = fieldReq.status();
+                    Instant now = Instant.now();
+
+                    DriverFieldVerification verification = driverFieldVerificationRepository
+                            .findByDriverIdAndFieldNameIgnoreCase(driverId, fieldName)
+                            .orElseGet(() -> DriverFieldVerification.builder()
+                                    .driverId(driverId)
+                                    .fieldName(fieldName)
+                                    .status(DriverFieldVerificationStatus.PENDING)
+                                    .build());
+
+                    verification.setFieldName(fieldName);
+                    verification.setStatus(status);
+                    verification.setNotes(normalizeNotes(fieldReq.notes()));
+                    verification.setVerifiedByAdminId(adminId);
+                    verification.setVerifiedAt(status == DriverFieldVerificationStatus.PENDING ? null : now);
+
+                    return driverFieldVerificationRepository.save(verification);
+                })
+                .toList();
+
+        List<DriverFieldVerificationView> verificationViews = savedVerifications.stream()
+                .map(this::toFieldView)
+                .sorted(Comparator.comparing(DriverFieldVerificationView::fieldName))
+                .toList();
+
+        return new DriverBulkFieldVerificationResponse(true, "Driver fields verified successfully", verificationViews);
     }
 
     private List<DriverFieldVerificationView> toFieldViews(List<DriverFieldVerification> verifications) {
@@ -171,6 +214,9 @@ public class AdminDriverManagementService {
                 profile.getExpiryDateKyc(),
                 profile.getBloodGroup(),
                 profile.getQualification(),
+                profile.getBatchNumber(),
+                profile.getBatchExpiryDate(),
+                profile.getFatherName(),
                 toDocument("profilePhoto", profile.getProfilePhoto(), profile.getProfilePhotoContentType()),
                 toDocument("licenseFront", profile.getLicenseFront(), profile.getLicenseFrontContentType()),
                 toDocument("licenseBack", profile.getLicenseBack(), profile.getLicenseBackContentType()),
@@ -198,6 +244,70 @@ public class AdminDriverManagementService {
         }
         String encoded = Base64.getEncoder().encodeToString(data);
         return new DriverDocumentView(label, contentType, encoded);
+    }
+
+    private List<DriverFieldVerificationView> getAllFieldVerifications(Long driverId) {
+        List<DriverFieldVerification> existingVerifications = driverFieldVerificationRepository.findByDriverId(driverId);
+
+        // Create a map of existing verifications by field name
+        Map<String, DriverFieldVerification> verificationMap = existingVerifications.stream()
+                .collect(Collectors.toMap(DriverFieldVerification::getFieldName, v -> v));
+
+        // Get all verifiable field names
+        List<String> allVerifiableFields = getVerifiableFieldNames();
+
+        // Create verification views for all fields, using existing records or creating pending ones
+        return allVerifiableFields.stream()
+                .map(fieldName -> {
+                    DriverFieldVerification verification = verificationMap.get(fieldName);
+                    if (verification != null) {
+                        return toFieldView(verification);
+                    } else {
+                        // Create a pending verification view for fields that don't exist yet
+                        return new DriverFieldVerificationView(
+                                fieldName,
+                                DriverFieldVerificationStatus.PENDING,
+                                null,
+                                null,
+                                null);
+                    }
+                })
+                .sorted(Comparator.comparing(DriverFieldVerificationView::fieldName))
+                .toList();
+    }
+
+    private List<String> getVerifiableFieldNames() {
+        return Arrays.asList(
+                "FULL_NAME",
+                "DOB",
+                "GENDER",
+                "EMERGENCY_CONTACT_NAME",
+                "EMERGENCY_CONTACT_NUMBER",
+                "PERMANENT_ADDRESS",
+                "CURRENT_ADDRESS",
+                "MOTHER_TONGUE",
+                "RELATIONSHIP",
+                "LANGUAGES",
+                "LICENSE_NUMBER",
+                "LICENSE_TYPE",
+                "BATCH",
+                "EXPIRY_DATE",
+                "TRANSMISSION",
+                "EXPERIENCE",
+                "GOV_ID_TYPE",
+                "GOV_ID_NUMBER",
+                "EXPIRY_DATE_KYC",
+                "BLOOD_GROUP",
+                "QUALIFICATION",
+                "BATCH_NUMBER",
+                "BATCH_EXPIRY_DATE",
+                "FATHER_NAME",
+                "PROFILE_PHOTO",
+                "LICENSE_FRONT",
+                "LICENSE_BACK",
+                "GOV_ID_FRONT",
+                "GOV_ID_BACK"
+        );
     }
 
     private String normalizeFieldName(String rawField) {

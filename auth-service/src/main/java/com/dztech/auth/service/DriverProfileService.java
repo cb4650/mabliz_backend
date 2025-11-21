@@ -127,6 +127,15 @@ public class DriverProfileService {
         if (StringUtils.hasText(form.getQualification())) {
             profile.setQualification(form.getQualification().trim());
         }
+        if (StringUtils.hasText(form.getBatchNumber())) {
+            profile.setBatchNumber(form.getBatchNumber().trim());
+        }
+        if (StringUtils.hasText(form.getBatchExpiryDate())) {
+            profile.setBatchExpiryDate(form.getBatchExpiryDate().trim());
+        }
+        if (StringUtils.hasText(form.getFatherName())) {
+            profile.setFatherName(form.getFatherName().trim());
+        }
 
         if (form.getProfilePhoto() != null && !form.getProfilePhoto().isEmpty()) {
             ImagePayload upload = readImage(form.getProfilePhoto(), "profilePhoto");
@@ -208,7 +217,10 @@ public class DriverProfileService {
                 profile.getGovIdNumber(),
                 profile.getExpiryDateKyc(),
                 profile.getBloodGroup(),
-                profile.getQualification());
+                profile.getQualification(),
+                profile.getBatchNumber(),
+                profile.getBatchExpiryDate(),
+                profile.getFatherName());
     }
 
     private LocalDate parseDate(String dob, LocalDate fallback) {

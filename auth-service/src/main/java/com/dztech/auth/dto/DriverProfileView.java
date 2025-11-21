@@ -29,5 +29,8 @@ public record DriverProfileView(
         String govIdNumber,
         String expiryDateKyc,
         String bloodGroup,
-        String qualification) {
+        String qualification,
+        String batchNumber,
+        String batchExpiryDate,
+        String fatherName) {
 }

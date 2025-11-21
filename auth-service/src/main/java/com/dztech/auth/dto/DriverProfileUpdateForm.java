@@ -70,6 +70,14 @@ public class DriverProfileUpdateForm {
     @Size(max = 50, message = "Qualification must be at most 50 characters")
     private String qualification;
 
+    @Size(max = 50, message = "Batch number must be at most 50 characters")
+    private String batchNumber;
+
+    private String batchExpiryDate;
+
+    @Size(max = 150, message = "Father name must be at most 150 characters")
+    private String fatherName;
+
     private MultipartFile profilePhoto;
     private MultipartFile licenseFront;
     private MultipartFile licenseBack;
@@ -258,6 +266,30 @@ public class DriverProfileUpdateForm {
 
     public void setQualification(String qualification) {
         this.qualification = qualification;
+    }
+
+    public String getBatchNumber() {
+        return batchNumber;
+    }
+
+    public void setBatchNumber(String batchNumber) {
+        this.batchNumber = batchNumber;
+    }
+
+    public String getBatchExpiryDate() {
+        return batchExpiryDate;
+    }
+
+    public void setBatchExpiryDate(String batchExpiryDate) {
+        this.batchExpiryDate = batchExpiryDate;
+    }
+
+    public String getFatherName() {
+        return fatherName;
+    }
+
+    public void setFatherName(String fatherName) {
+        this.fatherName = fatherName;
     }
 
     public MultipartFile getProfilePhoto() {

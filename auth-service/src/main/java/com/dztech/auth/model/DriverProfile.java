@@ -115,6 +115,15 @@ public class DriverProfile {
     @Column(name = "qualification", length = 50)
     private String qualification;
 
+    @Column(name = "batch_number", length = 50)
+    private String batchNumber;
+
+    @Column(name = "batch_expiry_date")
+    private String batchExpiryDate;
+
+    @Column(name = "father_name", length = 150)
+    private String fatherName;
+
     @Lob
     @Column(name = "profile_photo", columnDefinition = "LONGBLOB")
     private byte[] profilePhoto;
