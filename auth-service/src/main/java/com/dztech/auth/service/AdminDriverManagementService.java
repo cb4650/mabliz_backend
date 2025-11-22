@@ -119,11 +119,8 @@ public class AdminDriverManagementService {
 
         DriverFieldVerification saved = driverFieldVerificationRepository.save(verification);
 
-        DriverProfileStatus requestedStatus = request.overallStatus();
-        if (requestedStatus != null && profile.getStatus() != requestedStatus) {
-            profile.setStatus(requestedStatus);
-            driverProfileRepository.save(profile);
-        }
+        // Update driver profile status based on all field verifications
+        updateDriverProfileStatus(profile);
 
         return toFieldView(saved);
     }
@@ -160,6 +157,9 @@ public class AdminDriverManagementService {
                     return driverFieldVerificationRepository.save(verification);
                 })
                 .toList();
+
+        // Update driver profile status based on all field verifications
+        updateDriverProfileStatus(profile);
 
         List<DriverFieldVerificationView> verificationViews = savedVerifications.stream()
                 .map(this::toFieldView)
@@ -308,6 +308,76 @@ public class AdminDriverManagementService {
                 "GOV_ID_FRONT",
                 "GOV_ID_BACK"
         );
+    }
+
+    /**
+     * Updates the driver profile status based on field verifications.
+     * Logic: If any field is REJECTED -> status becomes REJECTED
+     *        If all fields are VERIFIED -> status becomes VERIFIED
+     *        If all fields are PENDING -> status becomes PENDING
+     */
+    private void updateDriverProfileStatus(DriverProfile profile) {
+        Long driverId = profile.getUserId();
+
+        // Get all existing field verifications for this driver
+        List<DriverFieldVerification> allVerifications = driverFieldVerificationRepository.findByDriverId(driverId);
+
+        // If no verifications exist yet, set to PENDING
+        if (allVerifications.isEmpty()) {
+            profile.setStatus(DriverProfileStatus.PENDING);
+            driverProfileRepository.save(profile);
+            return;
+        }
+
+        // Create a map for quick lookup
+        Map<String, DriverFieldVerificationStatus> verificationStatusMap = allVerifications.stream()
+                .collect(Collectors.toMap(DriverFieldVerification::getFieldName, DriverFieldVerification::getStatus));
+
+        // Get all verifiable field names
+        List<String> verifiableFields = getVerifiableFieldNames();
+        int totalFields = verifiableFields.size();
+
+        // Count statuses
+        long rejectedCount = 0;
+        long verifiedCount = 0;
+        long pendingCount = 0;
+
+        // Check each verifiable field
+        for (String fieldName : verifiableFields) {
+            DriverFieldVerificationStatus status = verificationStatusMap.get(fieldName);
+
+            // If verification record doesn't exist, treat as PENDING
+            if (status == null) {
+                status = DriverFieldVerificationStatus.PENDING;
+            }
+
+            if (status == DriverFieldVerificationStatus.REJECTED) {
+                rejectedCount++;
+            } else if (status == DriverFieldVerificationStatus.VERIFIED) {
+                verifiedCount++;
+            } else if (status == DriverFieldVerificationStatus.PENDING) {
+                pendingCount++;
+            }
+        }
+
+        // Determine new status
+        DriverProfileStatus newStatus;
+        if (rejectedCount > 0) {
+            // If any field is rejected, overall status is BANNED
+            newStatus = DriverProfileStatus.BANNED;
+        } else if (verifiedCount == totalFields) {
+            // If all fields are verified, overall status is VERIFIED
+            newStatus = DriverProfileStatus.VERIFIED;
+        } else {
+            // If there are pending fields, overall status is PENDING
+            newStatus = DriverProfileStatus.PENDING;
+        }
+
+        // Update profile status only if it changed
+        if (profile.getStatus() != newStatus) {
+            profile.setStatus(newStatus);
+            driverProfileRepository.save(profile);
+        }
     }
 
     private String normalizeFieldName(String rawField) {
