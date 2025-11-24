@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS driver_vehicles (
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
     CONSTRAINT fk_driver_vehicles_user
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES driver_profiles(user_id) ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX idx_driver_vehicles_vehicle_number
