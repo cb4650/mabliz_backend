@@ -1,5 +1,6 @@
 package com.dztech.auth.dto;
 
+import com.dztech.auth.model.DriverProfileStatus;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
@@ -32,5 +33,6 @@ public record DriverProfileView(
         String qualification,
         String batchNumber,
         String batchExpiryDate,
-        String fatherName) {
+        String fatherName,
+        DriverProfileStatus status) {
 }

@@ -220,7 +220,8 @@ public class DriverProfileService {
                 profile.getQualification(),
                 profile.getBatchNumber(),
                 profile.getBatchExpiryDate(),
-                profile.getFatherName());
+                profile.getFatherName(),
+                profile.getStatus());
     }
 
     private LocalDate parseDate(String dob, LocalDate fallback) {
