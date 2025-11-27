@@ -10,6 +10,7 @@ import com.dztech.auth.dto.OtpVerificationRequest;
 import com.dztech.auth.dto.TokenRefreshRequest;
 import com.dztech.auth.dto.TokenRefreshResponse;
 import com.dztech.auth.exception.OtpBlockedException;
+import com.dztech.auth.exception.OtpInvalidException;
 import com.dztech.auth.model.AppId;
 import com.dztech.auth.model.DriverProfile;
 import com.dztech.auth.model.DriverProfileStatus;
@@ -64,6 +65,15 @@ public class AuthenticationService {
     @Transactional(readOnly = true)
     public OtpRequestResponse requestOtp(OtpRequest request, AppId appId) {
         String normalizedPhone = normalizePhone(request.phone());
+        OtpFailureTracking.RoleType roleType = resolveRoleType(appId);
+
+        // Check if phone is blocked for this role
+        if (otpFailureTrackingService.isOtpBlocked(normalizedPhone, roleType)) {
+            var remainingTime = otpFailureTrackingService.getRemainingBlockTime(normalizedPhone, roleType);
+            throw new OtpBlockedException(
+                "Phone number is temporarily blocked due to too many failed OTP attempts",
+                remainingTime.orElse(java.time.Duration.ZERO));
+        }
 
         // Check if user is new (no existing profile)
         boolean newUser = isNewUser(normalizedPhone, appId);
@@ -106,9 +116,9 @@ public class AuthenticationService {
                     profileResult.profileData().email(),
                     profileResult.profileData().emailVerified());
         } catch (Exception e) {
-            // Record failure for invalid OTP or other verification errors
+            // Record failure for invalid OTP
             otpFailureTrackingService.recordOtpFailure(normalizedPhone, roleType);
-            throw e;
+            throw new OtpInvalidException("OTP is invalid");
         }
     }
 

@@ -1,5 +1,7 @@
 package com.dztech.auth.controller;
 
+import com.dztech.auth.exception.OtpBlockedException;
+import com.dztech.auth.exception.OtpInvalidException;
 import com.dztech.auth.exception.ResourceNotFoundException;
 import com.dztech.auth.security.JwtAuthenticationException;
 import java.time.Instant;
@@ -46,5 +48,22 @@ public class GlobalExceptionHandler {
         body.put("timestamp", Instant.now());
         body.put("error", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
+    @ExceptionHandler(OtpInvalidException.class)
+    public ResponseEntity<Map<String, Object>> handleOtpInvalid(OtpInvalidException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", Instant.now());
+        body.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
+    @ExceptionHandler(OtpBlockedException.class)
+    public ResponseEntity<Map<String, Object>> handleOtpBlocked(OtpBlockedException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", Instant.now());
+        body.put("error", ex.getMessage());
+        body.put("remainingSeconds", ex.getRemainingSeconds());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 }

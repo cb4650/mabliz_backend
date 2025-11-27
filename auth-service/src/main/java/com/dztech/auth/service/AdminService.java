@@ -8,6 +8,7 @@ import com.dztech.auth.dto.OtpRequest;
 import com.dztech.auth.dto.OtpRequestResponse;
 import com.dztech.auth.dto.OtpVerificationRequest;
 import com.dztech.auth.exception.OtpBlockedException;
+import com.dztech.auth.exception.OtpInvalidException;
 import com.dztech.auth.model.Admin;
 import com.dztech.auth.model.AppId;
 import com.dztech.auth.model.OtpFailureTracking;
@@ -43,6 +44,14 @@ public class AdminService {
     @Transactional(readOnly = true)
     public OtpRequestResponse requestOtp(OtpRequest request, AppId appId) {
         String normalizedPhone = normalizePhone(request.phone());
+
+        // Check if phone is blocked for admin role
+        if (otpFailureTrackingService.isOtpBlocked(normalizedPhone, OtpFailureTracking.RoleType.ADMIN)) {
+            var remainingTime = otpFailureTrackingService.getRemainingBlockTime(normalizedPhone, OtpFailureTracking.RoleType.ADMIN);
+            throw new OtpBlockedException(
+                "Phone number is temporarily blocked due to too many failed OTP attempts",
+                remainingTime.orElse(java.time.Duration.ZERO));
+        }
 
         // Check if admin exists with this phone number
         boolean newUser = !adminRepository.existsByPhone(normalizedPhone);
@@ -86,9 +95,9 @@ public class AdminService {
                     admin.getName(),
                     admin.getPhone());
         } catch (Exception e) {
-            // Record failure for invalid OTP or other verification errors
+            // Record failure for invalid OTP
             otpFailureTrackingService.recordOtpFailure(normalizedPhone, OtpFailureTracking.RoleType.ADMIN);
-            throw e;
+            throw new OtpInvalidException("OTP is invalid");
         }
     }
 

@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 @Service
 public class OtpFailureTrackingService {
@@ -22,7 +23,7 @@ public class OtpFailureTrackingService {
         this.repository = repository;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordOtpFailure(String phone, OtpFailureTracking.RoleType roleType) {
         Instant now = Instant.now();
 
