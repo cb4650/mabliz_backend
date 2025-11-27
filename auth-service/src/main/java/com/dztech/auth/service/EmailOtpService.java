@@ -2,7 +2,9 @@ package com.dztech.auth.service;
 
 import com.dztech.auth.client.EmailOtpSender;
 import com.dztech.auth.exception.EmailOtpException;
+import com.dztech.auth.exception.OtpBlockedException;
 import com.dztech.auth.model.EmailVerificationToken;
+import com.dztech.auth.model.OtpFailureTracking;
 import com.dztech.auth.repository.EmailVerificationTokenRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -17,16 +19,19 @@ public class EmailOtpService {
 
     private final EmailVerificationTokenRepository tokenRepository;
     private final EmailOtpSender emailOtpSender;
+    private final OtpFailureTrackingService otpFailureTrackingService;
     private final Duration expiry;
     private final int otpLength;
 
     public EmailOtpService(
             EmailVerificationTokenRepository tokenRepository,
             EmailOtpSender emailOtpSender,
+            OtpFailureTrackingService otpFailureTrackingService,
             @Value("${email.otp.expiry-minutes:10}") long expiryMinutes,
             @Value("${email.otp.length:6}") int otpLength) {
         this.tokenRepository = tokenRepository;
         this.emailOtpSender = emailOtpSender;
+        this.otpFailureTrackingService = otpFailureTrackingService;
         if (expiryMinutes <= 0) {
             throw new EmailOtpException("email.otp.expiry-minutes must be positive");
         }

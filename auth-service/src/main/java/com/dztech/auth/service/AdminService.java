@@ -7,11 +7,14 @@ import com.dztech.auth.dto.AdminRegistrationResponse;
 import com.dztech.auth.dto.OtpRequest;
 import com.dztech.auth.dto.OtpRequestResponse;
 import com.dztech.auth.dto.OtpVerificationRequest;
+import com.dztech.auth.exception.OtpBlockedException;
 import com.dztech.auth.model.Admin;
 import com.dztech.auth.model.AppId;
+import com.dztech.auth.model.OtpFailureTracking;
 import com.dztech.auth.repository.AdminRepository;
 import com.dztech.auth.security.JwtTokenService;
 import com.dztech.auth.security.JwtTokenService.JwtTokenPayload;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -24,14 +27,17 @@ public class AdminService {
     private final AdminRepository adminRepository;
     private final JwtTokenService jwtTokenService;
     private final OtpProviderClient otpProviderClient;
+    private final OtpFailureTrackingService otpFailureTrackingService;
 
     public AdminService(
             AdminRepository adminRepository,
             JwtTokenService jwtTokenService,
-            OtpProviderClient otpProviderClient) {
+            OtpProviderClient otpProviderClient,
+            OtpFailureTrackingService otpFailureTrackingService) {
         this.adminRepository = adminRepository;
         this.jwtTokenService = jwtTokenService;
         this.otpProviderClient = otpProviderClient;
+        this.otpFailureTrackingService = otpFailureTrackingService;
     }
 
     @Transactional(readOnly = true)
@@ -50,23 +56,40 @@ public class AdminService {
         String normalizedPhone = normalizePhone(request.phone());
         String normalizedOtp = normalizeOtp(request.otp());
 
+        // Check if phone is blocked for admin role
+        if (otpFailureTrackingService.isOtpBlocked(normalizedPhone, OtpFailureTracking.RoleType.ADMIN)) {
+            var remainingTime = otpFailureTrackingService.getRemainingBlockTime(normalizedPhone, OtpFailureTracking.RoleType.ADMIN);
+            throw new OtpBlockedException(
+                "Phone number is temporarily blocked due to too many failed OTP attempts",
+                remainingTime.orElse(java.time.Duration.ZERO));
+        }
+
         // Verify admin exists
         Admin admin = adminRepository.findByPhone(normalizedPhone)
                 .orElseThrow(() -> new IllegalArgumentException("Admin account not found for this phone number"));
 
-        // Verify OTP
-        otpProviderClient.verifyOtp(normalizedPhone, normalizedOtp);
+        try {
+            // Verify OTP
+            otpProviderClient.verifyOtp(normalizedPhone, normalizedOtp);
 
-        // Generate tokens
-        TokenPair tokens = issueTokens(admin, appId);
+            // Reset failure count on successful verification
+            otpFailureTrackingService.resetOtpFailures(normalizedPhone, OtpFailureTracking.RoleType.ADMIN);
 
-        return new AdminLoginResponse(
-                true,
-                tokens.accessToken(),
-                tokens.refreshToken(),
-                admin.getId(),
-                admin.getName(),
-                admin.getPhone());
+            // Generate tokens
+            TokenPair tokens = issueTokens(admin, appId);
+
+            return new AdminLoginResponse(
+                    true,
+                    tokens.accessToken(),
+                    tokens.refreshToken(),
+                    admin.getId(),
+                    admin.getName(),
+                    admin.getPhone());
+        } catch (Exception e) {
+            // Record failure for invalid OTP or other verification errors
+            otpFailureTrackingService.recordOtpFailure(normalizedPhone, OtpFailureTracking.RoleType.ADMIN);
+            throw e;
+        }
     }
 
     @Transactional

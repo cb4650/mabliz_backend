@@ -1,6 +1,7 @@
 package com.dztech.auth.controller;
 
 import com.dztech.auth.dto.LoginResponse;
+import com.dztech.auth.dto.NewUserCheckResponse;
 import com.dztech.auth.dto.OtpRequest;
 import com.dztech.auth.dto.OtpRequestResponse;
 import com.dztech.auth.dto.OtpVerificationRequest;
@@ -45,6 +46,16 @@ public class AuthenticationController {
     @PostMapping("/refresh")
     public ResponseEntity<TokenRefreshResponse> refresh(@RequestBody @Valid TokenRefreshRequest request) {
         TokenRefreshResponse response = authenticationService.refreshToken(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/check-new-user")
+    public ResponseEntity<NewUserCheckResponse> checkNewUser(
+            @RequestHeader("appId") String appIdHeader, @RequestBody @Valid OtpRequest request) {
+        AppId appId = AppId.fromHeader(appIdHeader);
+        String normalizedPhone = authenticationService.normalizePhoneForCheck(request.phone());
+        boolean isNewUser = authenticationService.isNewDriverUser(normalizedPhone, appId);
+        NewUserCheckResponse response = new NewUserCheckResponse(true, "User check completed", isNewUser);
         return ResponseEntity.ok(response);
     }
 }

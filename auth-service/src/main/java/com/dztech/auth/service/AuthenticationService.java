@@ -9,9 +9,11 @@ import com.dztech.auth.dto.OtpRequestResponse;
 import com.dztech.auth.dto.OtpVerificationRequest;
 import com.dztech.auth.dto.TokenRefreshRequest;
 import com.dztech.auth.dto.TokenRefreshResponse;
+import com.dztech.auth.exception.OtpBlockedException;
 import com.dztech.auth.model.AppId;
 import com.dztech.auth.model.DriverProfile;
 import com.dztech.auth.model.DriverProfileStatus;
+import com.dztech.auth.model.OtpFailureTracking;
 import com.dztech.auth.model.User;
 import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.DriverProfileRepository;
@@ -39,6 +41,7 @@ public class AuthenticationService {
     private final JwtTokenService jwtTokenService;
     private final OtpProviderClient otpProviderClient;
     private final LoginProfileProperties loginProfileProperties;
+    private final OtpFailureTrackingService otpFailureTrackingService;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public AuthenticationService(
@@ -47,13 +50,15 @@ public class AuthenticationService {
             DriverProfileRepository driverProfileRepository,
             JwtTokenService jwtTokenService,
             OtpProviderClient otpProviderClient,
-            LoginProfileProperties loginProfileProperties) {
+            LoginProfileProperties loginProfileProperties,
+            OtpFailureTrackingService otpFailureTrackingService) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
         this.driverProfileRepository = driverProfileRepository;
         this.jwtTokenService = jwtTokenService;
         this.otpProviderClient = otpProviderClient;
         this.loginProfileProperties = loginProfileProperties;
+        this.otpFailureTrackingService = otpFailureTrackingService;
     }
 
     @Transactional(readOnly = true)
@@ -71,22 +76,40 @@ public class AuthenticationService {
     public LoginResponse verifyOtp(OtpVerificationRequest request, AppId appId) {
         String normalizedPhone = normalizePhone(request.phone());
         String normalizedOtp = normalizeOtp(request.otp());
+        OtpFailureTracking.RoleType roleType = resolveRoleType(appId);
 
-        otpProviderClient.verifyOtp(normalizedPhone, normalizedOtp);
+        // Check if phone is blocked for this role
+        if (otpFailureTrackingService.isOtpBlocked(normalizedPhone, roleType)) {
+            var remainingTime = otpFailureTrackingService.getRemainingBlockTime(normalizedPhone, roleType);
+            throw new OtpBlockedException(
+                "Phone number is temporarily blocked due to too many failed OTP attempts",
+                remainingTime.orElse(java.time.Duration.ZERO));
+        }
 
-        ProfileResult profileResult = handleProfileForLogin(appId, normalizedPhone, request.phone());
-        TokenPair tokens = issueTokens(profileResult.user(), profileResult.profileData(), appId);
+        try {
+            otpProviderClient.verifyOtp(normalizedPhone, normalizedOtp);
 
-        return new LoginResponse(
-                true,
-                profileResult.newUser(),
-                tokens.accessToken(),
-                tokens.refreshToken(),
-                profileResult.user().getId(),
-                profileResult.profileData().name(),
-                profileResult.profileData().phone(),
-                profileResult.profileData().email(),
-                profileResult.profileData().emailVerified());
+            // Reset failure count on successful verification
+            otpFailureTrackingService.resetOtpFailures(normalizedPhone, roleType);
+
+            ProfileResult profileResult = handleProfileForLogin(appId, normalizedPhone, request.phone());
+            TokenPair tokens = issueTokens(profileResult.user(), profileResult.profileData(), appId);
+
+            return new LoginResponse(
+                    true,
+                    profileResult.newUser(),
+                    tokens.accessToken(),
+                    tokens.refreshToken(),
+                    profileResult.user().getId(),
+                    profileResult.profileData().name(),
+                    profileResult.profileData().phone(),
+                    profileResult.profileData().email(),
+                    profileResult.profileData().emailVerified());
+        } catch (Exception e) {
+            // Record failure for invalid OTP or other verification errors
+            otpFailureTrackingService.recordOtpFailure(normalizedPhone, roleType);
+            throw e;
+        }
     }
 
     public TokenRefreshResponse refreshToken(TokenRefreshRequest request) {
@@ -289,6 +312,14 @@ public class AuthenticationService {
         return digitsOnly;
     }
 
+    /**
+     * Public method to normalize phone number for user checking.
+     * This is exposed for controller use.
+     */
+    public String normalizePhoneForCheck(String rawPhone) {
+        return normalizePhone(rawPhone);
+    }
+
     private String legacyNormalizePhone(String rawPhone) {
         String trimmed = rawPhone == null ? "" : rawPhone.trim();
         return StringUtils.hasText(trimmed) ? trimmed : null;
@@ -405,6 +436,26 @@ public class AuthenticationService {
         return switch (profileType) {
             case DRIVER -> driverProfileRepository.findByPhone(normalizedPhone).isEmpty();
             case USER -> userProfileRepository.findByPhone(normalizedPhone).isEmpty();
+        };
+    }
+
+    /**
+     * Checks if the user is new for driver registration.
+     * Only checks the driver table, even if the phone number exists in the user table.
+     */
+    public boolean isNewDriverUser(String normalizedPhone, AppId appId) {
+        ProfileType profileType = loginProfileProperties.resolve(appId);
+        if (profileType == ProfileType.DRIVER) {
+            return driverProfileRepository.findByPhone(normalizedPhone).isEmpty();
+        }
+        throw new IllegalArgumentException("This method is only for driver appIds");
+    }
+
+    private OtpFailureTracking.RoleType resolveRoleType(AppId appId) {
+        ProfileType profileType = loginProfileProperties.resolve(appId);
+        return switch (profileType) {
+            case DRIVER -> OtpFailureTracking.RoleType.DRIVER;
+            case USER -> OtpFailureTracking.RoleType.USER;
         };
     }
 

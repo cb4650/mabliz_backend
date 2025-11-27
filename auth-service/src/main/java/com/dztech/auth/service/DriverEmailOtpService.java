@@ -2,6 +2,7 @@ package com.dztech.auth.service;
 
 import com.dztech.auth.client.EmailOtpSender;
 import com.dztech.auth.exception.EmailOtpException;
+import com.dztech.auth.exception.OtpBlockedException;
 import com.dztech.auth.model.DriverEmailVerificationToken;
 import com.dztech.auth.repository.DriverEmailVerificationTokenRepository;
 import java.time.Duration;
