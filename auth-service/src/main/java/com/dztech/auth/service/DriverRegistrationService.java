@@ -87,10 +87,9 @@ public class DriverRegistrationService {
                 .orElseGet(() -> createDriverProfile(userId, token.getName(), normalizedEmail));
 
         String tokenName = token.getName();
-        if (!StringUtils.hasText(profile.getFullName()) && StringUtils.hasText(tokenName)) {
+        if (StringUtils.hasText(tokenName)) {
             profile.setFullName(tokenName);
-        }
-        if (!StringUtils.hasText(profile.getFullName())) {
+        } else if (!StringUtils.hasText(profile.getFullName())) {
             profile.setFullName(defaultNameFromEmail(normalizedEmail));
         }
         profile.setEmail(normalizedEmail);
