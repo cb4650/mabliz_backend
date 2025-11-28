@@ -3,6 +3,9 @@ package com.dztech.auth.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.dztech.auth.dto.DriverVehicleCreateRequest;
@@ -11,6 +14,7 @@ import com.dztech.auth.exception.ResourceNotFoundException;
 import com.dztech.auth.model.DriverVehicle;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.DriverVehicleRepository;
+import com.dztech.auth.storage.DocumentStorageService;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,11 +32,15 @@ class DriverVehicleServiceTest {
     @Mock
     private DriverProfileRepository driverProfileRepository;
 
+    @Mock
+    private DocumentStorageService documentStorageService;
+
     private DriverVehicleService driverVehicleService;
 
     @BeforeEach
     void setUp() {
-        driverVehicleService = new DriverVehicleService(driverVehicleRepository, driverProfileRepository);
+        driverVehicleService =
+                new DriverVehicleService(driverVehicleRepository, driverProfileRepository, documentStorageService);
     }
 
     @Test
@@ -53,6 +61,8 @@ class DriverVehicleServiceTest {
         assertThat(view.vehicleNumber()).isEqualTo("TN09AB1234");
         assertThat(view.vehicleType()).isEqualTo("private");
         assertThat(view.insuranceExpiryDate()).isEqualTo(LocalDate.of(2025, 12, 31));
+        verify(documentStorageService)
+                .upload(anyString(), any(), eq(request.getRcImage().getSize()), eq("image/jpeg"));
     }
 
     @Test

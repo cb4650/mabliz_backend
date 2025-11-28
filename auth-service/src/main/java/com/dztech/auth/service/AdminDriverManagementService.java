@@ -19,8 +19,8 @@ import com.dztech.auth.model.DriverVehicle;
 import com.dztech.auth.repository.DriverFieldVerificationRepository;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.DriverVehicleRepository;
+import com.dztech.auth.storage.DocumentStorageService;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
@@ -38,14 +38,17 @@ public class AdminDriverManagementService {
     private final DriverProfileRepository driverProfileRepository;
     private final DriverFieldVerificationRepository driverFieldVerificationRepository;
     private final DriverVehicleRepository driverVehicleRepository;
+    private final DocumentStorageService documentStorageService;
 
     public AdminDriverManagementService(
             DriverProfileRepository driverProfileRepository,
             DriverFieldVerificationRepository driverFieldVerificationRepository,
-            DriverVehicleRepository driverVehicleRepository) {
+            DriverVehicleRepository driverVehicleRepository,
+            DocumentStorageService documentStorageService) {
         this.driverProfileRepository = driverProfileRepository;
         this.driverFieldVerificationRepository = driverFieldVerificationRepository;
         this.driverVehicleRepository = driverVehicleRepository;
+        this.documentStorageService = documentStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -217,11 +220,31 @@ public class AdminDriverManagementService {
                 profile.getBatchNumber(),
                 profile.getBatchExpiryDate(),
                 profile.getFatherName(),
-                toDocument("profilePhoto", profile.getProfilePhoto(), profile.getProfilePhotoContentType()),
-                toDocument("licenseFront", profile.getLicenseFront(), profile.getLicenseFrontContentType()),
-                toDocument("licenseBack", profile.getLicenseBack(), profile.getLicenseBackContentType()),
-                toDocument("govIdFront", profile.getGovIdFront(), profile.getGovIdFrontContentType()),
-                toDocument("govIdBack", profile.getGovIdBack(), profile.getGovIdBackContentType()));
+                toDocument(
+                        "profilePhoto",
+                        profile.getProfilePhotoObject(),
+                        profile.getProfilePhoto(),
+                        profile.getProfilePhotoContentType()),
+                toDocument(
+                        "licenseFront",
+                        profile.getLicenseFrontObject(),
+                        profile.getLicenseFront(),
+                        profile.getLicenseFrontContentType()),
+                toDocument(
+                        "licenseBack",
+                        profile.getLicenseBackObject(),
+                        profile.getLicenseBack(),
+                        profile.getLicenseBackContentType()),
+                toDocument(
+                        "govIdFront",
+                        profile.getGovIdFrontObject(),
+                        profile.getGovIdFront(),
+                        profile.getGovIdFrontContentType()),
+                toDocument(
+                        "govIdBack",
+                        profile.getGovIdBackObject(),
+                        profile.getGovIdBack(),
+                        profile.getGovIdBackContentType()));
     }
 
     private DriverVehicleDetailView toVehicleDetailView(DriverVehicle vehicle) {
@@ -233,17 +256,41 @@ public class AdminDriverManagementService {
                 vehicle.getInsuranceExpiryDate(),
                 vehicle.getBrand(),
                 vehicle.getModel(),
-                toDocument("rc", vehicle.getRcImage(), vehicle.getRcImageContentType()),
-                toDocument("insurance", vehicle.getInsuranceImage(), vehicle.getInsuranceImageContentType()),
-                toDocument("pollution", vehicle.getPollutionCertificateImage(), vehicle.getPollutionCertificateImageContentType()));
+                toDocument(
+                        "rc",
+                        vehicle.getRcImageObject(),
+                        vehicle.getRcImage(),
+                        vehicle.getRcImageContentType()),
+                toDocument(
+                        "insurance",
+                        vehicle.getInsuranceImageObject(),
+                        vehicle.getInsuranceImage(),
+                        vehicle.getInsuranceImageContentType()),
+                toDocument(
+                        "pollution",
+                        vehicle.getPollutionCertificateImageObject(),
+                        vehicle.getPollutionCertificateImage(),
+                        vehicle.getPollutionCertificateImageContentType()));
     }
 
-    private DriverDocumentView toDocument(String label, byte[] data, String contentType) {
-        if (data == null || data.length == 0) {
+    private DriverDocumentView toDocument(String label, String objectName, byte[] legacyData, String contentType) {
+        if (!StringUtils.hasText(objectName) && (legacyData == null || legacyData.length == 0)) {
             return null;
         }
-        String encoded = Base64.getEncoder().encodeToString(data);
-        return new DriverDocumentView(label, contentType, encoded);
+        String encoded = null;
+        if (legacyData != null && legacyData.length > 0) {
+            encoded = Base64.getEncoder().encodeToString(legacyData);
+        } else if (StringUtils.hasText(objectName)) {
+            encoded = documentStorageService
+                    .download(objectName)
+                    .map(bytes -> Base64.getEncoder().encodeToString(bytes))
+                    .orElse(null);
+        }
+        String url = null;
+        if (StringUtils.hasText(objectName)) {
+            url = documentStorageService.getPresignedUrl(objectName).orElse(null);
+        }
+        return new DriverDocumentView(label, contentType, encoded, url);
     }
 
     private List<DriverFieldVerificationView> getAllFieldVerifications(Long driverId) {
@@ -254,7 +301,7 @@ public class AdminDriverManagementService {
                 .collect(Collectors.toMap(DriverFieldVerification::getFieldName, v -> v));
 
         // Get all verifiable field names
-        List<String> allVerifiableFields = getVerifiableFieldNames();
+        List<String> allVerifiableFields = DriverFieldVerificationFields.all();
 
         // Create verification views for all fields, using existing records or creating pending ones
         return allVerifiableFields.stream()
@@ -274,40 +321,6 @@ public class AdminDriverManagementService {
                 })
                 .sorted(Comparator.comparing(DriverFieldVerificationView::fieldName))
                 .toList();
-    }
-
-    private List<String> getVerifiableFieldNames() {
-        return Arrays.asList(
-                "FULL_NAME",
-                "DOB",
-                "GENDER",
-                "EMERGENCY_CONTACT_NAME",
-                "EMERGENCY_CONTACT_NUMBER",
-                "PERMANENT_ADDRESS",
-                "CURRENT_ADDRESS",
-                "MOTHER_TONGUE",
-                "RELATIONSHIP",
-                "LANGUAGES",
-                "LICENSE_NUMBER",
-                "LICENSE_TYPE",
-                "BATCH",
-                "EXPIRY_DATE",
-                "TRANSMISSION",
-                "EXPERIENCE",
-                "GOV_ID_TYPE",
-                "GOV_ID_NUMBER",
-                "EXPIRY_DATE_KYC",
-                "BLOOD_GROUP",
-                "QUALIFICATION",
-                "BATCH_NUMBER",
-                "BATCH_EXPIRY_DATE",
-                "FATHER_NAME",
-                "PROFILE_PHOTO",
-                "LICENSE_FRONT",
-                "LICENSE_BACK",
-                "GOV_ID_FRONT",
-                "GOV_ID_BACK"
-        );
     }
 
     /**
@@ -334,7 +347,7 @@ public class AdminDriverManagementService {
                 .collect(Collectors.toMap(DriverFieldVerification::getFieldName, DriverFieldVerification::getStatus));
 
         // Get all verifiable field names
-        List<String> verifiableFields = getVerifiableFieldNames();
+        List<String> verifiableFields = DriverFieldVerificationFields.all();
         int totalFields = verifiableFields.size();
 
         // Count statuses

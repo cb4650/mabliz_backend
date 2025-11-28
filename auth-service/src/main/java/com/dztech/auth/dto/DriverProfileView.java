@@ -34,5 +34,6 @@ public record DriverProfileView(
         String batchNumber,
         String batchExpiryDate,
         String fatherName,
-        DriverProfileStatus status) {
+        DriverProfileStatus status,
+        List<DriverFieldVerificationView> fieldVerifications) {
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,8 +14,11 @@ import com.dztech.auth.dto.DriverProfileView;
 import com.dztech.auth.model.DriverProfile;
 import com.dztech.auth.model.DriverProfileStatus;
 import com.dztech.auth.model.UserProfile;
+import com.dztech.auth.repository.DriverFieldVerificationRepository;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.UserProfileRepository;
+import com.dztech.auth.storage.DocumentPathBuilder;
+import com.dztech.auth.storage.DocumentStorageService;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,13 +40,24 @@ class DriverProfileServiceTest {
     @Mock
     private UserProfileRepository userProfileRepository;
 
+    @Mock
+    private DriverFieldVerificationRepository driverFieldVerificationRepository;
+
+    @Mock
+    private DocumentStorageService documentStorageService;
+
     private DriverProfileService driverProfileService;
 
     @BeforeEach
     void setUp() {
         when(userProfileRepository.findByUserId(anyLong())).thenReturn(Optional.empty());
-        driverProfileService =
-                new DriverProfileService(driverProfileRepository, driverEmailOtpService, userProfileRepository);
+        when(driverFieldVerificationRepository.findByDriverId(anyLong())).thenReturn(List.of());
+        driverProfileService = new DriverProfileService(
+                driverProfileRepository,
+                driverEmailOtpService,
+                userProfileRepository,
+                driverFieldVerificationRepository,
+                documentStorageService);
     }
 
     @Test
@@ -106,10 +121,18 @@ class DriverProfileServiceTest {
         assertThat(view.fullName()).isEqualTo("New Name");
         assertThat(view.email()).isEqualTo("new@example.com");
         assertThat(view.emailVerified()).isTrue();
-        assertThat(profile.getProfilePhoto()).containsExactly(1, 2);
+        assertThat(profile.getProfilePhotoObject())
+                .isEqualTo(DocumentPathBuilder.profileDocument(10L, "profile-photo"));
+        assertThat(profile.getProfilePhoto()).isNull();
         assertThat(profile.getDob()).isEqualTo("1990-05-20");
         assertThat(profile.getExperience()).isEqualTo("5");
         verify(driverEmailOtpService).sendOtp(10L, "new@example.com", "New Name");
+        verify(documentStorageService)
+                .upload(
+                        DocumentPathBuilder.profileDocument(10L, "profile-photo"),
+                        any(),
+                        eq(form.getProfilePhoto().getSize()),
+                        "image/jpeg");
     }
 
     @Test

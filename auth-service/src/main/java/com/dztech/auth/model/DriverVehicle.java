@@ -53,8 +53,11 @@ public class DriverVehicle {
     private String rcNumber;
 
     @Lob
-    @Column(name = "rc_image", columnDefinition = "LONGBLOB", nullable = false)
+    @Column(name = "rc_image", columnDefinition = "LONGBLOB")
     private byte[] rcImage;
+
+    @Column(name = "rc_image_object", length = 255)
+    private String rcImageObject;
 
     @Column(name = "rc_image_content_type", nullable = false, length = 100)
     private String rcImageContentType;
@@ -63,15 +66,21 @@ public class DriverVehicle {
     private LocalDate insuranceExpiryDate;
 
     @Lob
-    @Column(name = "insurance_image", columnDefinition = "LONGBLOB", nullable = false)
+    @Column(name = "insurance_image", columnDefinition = "LONGBLOB")
     private byte[] insuranceImage;
+
+    @Column(name = "insurance_image_object", length = 255)
+    private String insuranceImageObject;
 
     @Column(name = "insurance_image_content_type", nullable = false, length = 100)
     private String insuranceImageContentType;
 
     @Lob
-    @Column(name = "pollution_certificate_image", columnDefinition = "LONGBLOB", nullable = false)
+    @Column(name = "pollution_certificate_image", columnDefinition = "LONGBLOB")
     private byte[] pollutionCertificateImage;
+
+    @Column(name = "pollution_certificate_image_object", length = 255)
+    private String pollutionCertificateImageObject;
 
     @Column(name = "pollution_certificate_image_content_type", nullable = false, length = 100)
     private String pollutionCertificateImageContentType;

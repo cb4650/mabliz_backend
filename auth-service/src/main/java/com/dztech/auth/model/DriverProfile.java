@@ -128,12 +128,18 @@ public class DriverProfile {
     @Column(name = "profile_photo", columnDefinition = "LONGBLOB")
     private byte[] profilePhoto;
 
+    @Column(name = "profile_photo_object", length = 255)
+    private String profilePhotoObject;
+
     @Column(name = "profile_photo_content_type", length = 100)
     private String profilePhotoContentType;
 
     @Lob
     @Column(name = "license_front", columnDefinition = "LONGBLOB")
     private byte[] licenseFront;
+
+    @Column(name = "license_front_object", length = 255)
+    private String licenseFrontObject;
 
     @Column(name = "license_front_content_type", length = 100)
     private String licenseFrontContentType;
@@ -142,6 +148,9 @@ public class DriverProfile {
     @Column(name = "license_back", columnDefinition = "LONGBLOB")
     private byte[] licenseBack;
 
+    @Column(name = "license_back_object", length = 255)
+    private String licenseBackObject;
+
     @Column(name = "license_back_content_type", length = 100)
     private String licenseBackContentType;
 
@@ -149,12 +158,18 @@ public class DriverProfile {
     @Column(name = "gov_id_front", columnDefinition = "LONGBLOB")
     private byte[] govIdFront;
 
+    @Column(name = "gov_id_front_object", length = 255)
+    private String govIdFrontObject;
+
     @Column(name = "gov_id_front_content_type", length = 100)
     private String govIdFrontContentType;
 
     @Lob
     @Column(name = "gov_id_back", columnDefinition = "LONGBLOB")
     private byte[] govIdBack;
+
+    @Column(name = "gov_id_back_object", length = 255)
+    private String govIdBackObject;
 
     @Column(name = "gov_id_back_content_type", length = 100)
     private String govIdBackContentType;

@@ -7,7 +7,10 @@ import com.dztech.auth.model.DriverVehicle;
 import com.dztech.auth.model.VehicleType;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.DriverVehicleRepository;
+import com.dztech.auth.storage.DocumentPathBuilder;
+import com.dztech.auth.storage.DocumentStorageService;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -27,11 +30,15 @@ public class DriverVehicleService {
 
     private final DriverVehicleRepository driverVehicleRepository;
     private final DriverProfileRepository driverProfileRepository;
+    private final DocumentStorageService documentStorageService;
 
     public DriverVehicleService(
-            DriverVehicleRepository driverVehicleRepository, DriverProfileRepository driverProfileRepository) {
+            DriverVehicleRepository driverVehicleRepository,
+            DriverProfileRepository driverProfileRepository,
+            DocumentStorageService documentStorageService) {
         this.driverVehicleRepository = driverVehicleRepository;
         this.driverProfileRepository = driverProfileRepository;
+        this.documentStorageService = documentStorageService;
     }
 
     @Transactional
@@ -47,24 +54,25 @@ public class DriverVehicleService {
 
         VehicleType vehicleType = VehicleType.fromString(request.getVehicleType());
         LocalDate insuranceExpiryDate = parseInsuranceExpiry(request.getInsuranceExpiryDate());
-
-        ImagePayload rcImage = readImage(request.getRcImage(), "rcImage");
-        ImagePayload insuranceImage = readImage(request.getInsuranceImage(), "insuranceImage");
-        ImagePayload pollutionCertificateImage =
-                readImage(request.getPollutionCertificateImage(), "pollutionCertificateImage");
+        String rcImageObject =
+                uploadVehicleDocument(userId, vehicleNumber, request.getRcImage(), "rc-image");
+        String insuranceImageObject =
+                uploadVehicleDocument(userId, vehicleNumber, request.getInsuranceImage(), "insurance-image");
+        String pollutionCertificateImageObject =
+                uploadVehicleDocument(userId, vehicleNumber, request.getPollutionCertificateImage(), "pollution-certificate-image");
 
         DriverVehicle toSave = DriverVehicle.builder()
                 .userId(userId)
                 .vehicleNumber(vehicleNumber)
                 .vehicleType(vehicleType)
                 .rcNumber(normalizeIdentifier(request.getRcNumber()))
-                .rcImage(rcImage.data())
-                .rcImageContentType(rcImage.contentType())
+                .rcImageObject(rcImageObject)
+                .rcImageContentType(request.getRcImage().getContentType())
                 .insuranceExpiryDate(insuranceExpiryDate)
-                .insuranceImage(insuranceImage.data())
-                .insuranceImageContentType(insuranceImage.contentType())
-                .pollutionCertificateImage(pollutionCertificateImage.data())
-                .pollutionCertificateImageContentType(pollutionCertificateImage.contentType())
+                .insuranceImageObject(insuranceImageObject)
+                .insuranceImageContentType(request.getInsuranceImage().getContentType())
+                .pollutionCertificateImageObject(pollutionCertificateImageObject)
+                .pollutionCertificateImageContentType(request.getPollutionCertificateImage().getContentType())
                 .brand(normalize(request.getBrand()))
                 .model(normalize(request.getModel()))
                 .build();
@@ -98,7 +106,18 @@ public class DriverVehicleService {
         throw new IllegalArgumentException("insuranceExpiryDate must be in DD-MM-YYYY format");
     }
 
-    private ImagePayload readImage(MultipartFile file, String fieldName) {
+    private String uploadVehicleDocument(Long userId, String vehicleNumber, MultipartFile file, String label) {
+        validateImage(file, label);
+        String objectName = DocumentPathBuilder.vehicleDocument(userId, vehicleNumber, label);
+        try (InputStream inputStream = file.getInputStream()) {
+            documentStorageService.upload(objectName, inputStream, file.getSize(), file.getContentType());
+            return objectName;
+        } catch (IOException ex) {
+            throw new IllegalArgumentException("Unable to read uploaded file for " + label, ex);
+        }
+    }
+
+    private void validateImage(MultipartFile file, String fieldName) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException(fieldName + " is required");
         }
@@ -108,11 +127,6 @@ public class DriverVehicleService {
         String contentType = file.getContentType();
         if (!StringUtils.hasText(contentType) || !contentType.toLowerCase(Locale.ROOT).startsWith("image/")) {
             throw new IllegalArgumentException(fieldName + " must be an image file");
-        }
-        try {
-            return new ImagePayload(file.getBytes(), contentType);
-        } catch (IOException ex) {
-            throw new IllegalArgumentException("Unable to read uploaded file for " + fieldName, ex);
         }
     }
 
@@ -126,6 +140,4 @@ public class DriverVehicleService {
         }
         return value.trim();
     }
-
-    private record ImagePayload(byte[] data, String contentType) {}
 }

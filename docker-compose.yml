@@ -1,4 +1,25 @@
 services:
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-05-10T01-41-38Z
+    container_name: dztech-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    expose:
+      - "9000"
+      - "9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+
   mysql:
     image: mysql:8.0
     container_name: dztech-mysql
@@ -16,6 +37,7 @@ services:
     container_name: dztech-auth-service
     depends_on:
       - mysql
+      - minio
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/auth_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: root
@@ -26,6 +48,11 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-dztech-auth-service}
       JWT_ACCESS_EXPIRATION_MINUTES: ${JWT_ACCESS_EXPIRATION_MINUTES:-1440}
       JWT_REFRESH_EXPIRATION_MINUTES: ${JWT_REFRESH_EXPIRATION_MINUTES:-43200}
+      DOCUMENT_STORAGE_ENDPOINT: http://minio:9000
+      DOCUMENT_STORAGE_ACCESS_KEY: ${DOCUMENT_STORAGE_ACCESS_KEY:-minioadmin}
+      DOCUMENT_STORAGE_SECRET_KEY: ${DOCUMENT_STORAGE_SECRET_KEY:-minioadmin}
+      DOCUMENT_STORAGE_BUCKET: ${DOCUMENT_STORAGE_BUCKET:-dztech-documents}
+      DOCUMENT_STORAGE_REGION: ${DOCUMENT_STORAGE_REGION:-}
     ports:
       - "5102:8081"
 
@@ -60,3 +87,4 @@ services:
 
 volumes:
   mysql_data:
+  minio_data:

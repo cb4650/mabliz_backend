@@ -1,16 +1,27 @@
 package com.dztech.auth.service;
 
+import com.dztech.auth.dto.DriverFieldVerificationView;
 import com.dztech.auth.dto.DriverProfileUpdateForm;
 import com.dztech.auth.dto.DriverProfileView;
 import com.dztech.auth.exception.ResourceNotFoundException;
+import com.dztech.auth.model.DriverFieldVerification;
+import com.dztech.auth.model.DriverFieldVerificationStatus;
 import com.dztech.auth.model.DriverProfile;
 import com.dztech.auth.model.UserProfile;
+import com.dztech.auth.repository.DriverFieldVerificationRepository;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.UserProfileRepository;
+import com.dztech.auth.storage.DocumentPathBuilder;
+import com.dztech.auth.storage.DocumentStorageService;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,14 +36,20 @@ public class DriverProfileService {
     private final DriverProfileRepository driverProfileRepository;
     private final DriverEmailOtpService driverEmailOtpService;
     private final UserProfileRepository userProfileRepository;
+    private final DriverFieldVerificationRepository driverFieldVerificationRepository;
+    private final DocumentStorageService documentStorageService;
 
     public DriverProfileService(
             DriverProfileRepository driverProfileRepository,
             DriverEmailOtpService driverEmailOtpService,
-            UserProfileRepository userProfileRepository) {
+            UserProfileRepository userProfileRepository,
+            DriverFieldVerificationRepository driverFieldVerificationRepository,
+            DocumentStorageService documentStorageService) {
         this.driverProfileRepository = driverProfileRepository;
         this.driverEmailOtpService = driverEmailOtpService;
         this.userProfileRepository = userProfileRepository;
+        this.driverFieldVerificationRepository = driverFieldVerificationRepository;
+        this.documentStorageService = documentStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -138,28 +155,33 @@ public class DriverProfileService {
         }
 
         if (form.getProfilePhoto() != null && !form.getProfilePhoto().isEmpty()) {
-            ImagePayload upload = readImage(form.getProfilePhoto(), "profilePhoto");
-            profile.setProfilePhoto(upload.data());
+            DocumentUpload upload = uploadProfileDocument(userId, form.getProfilePhoto(), "profile-photo");
+            profile.setProfilePhotoObject(upload.objectName());
+            profile.setProfilePhoto(null);
             profile.setProfilePhotoContentType(upload.contentType());
         }
         if (form.getLicenseFront() != null && !form.getLicenseFront().isEmpty()) {
-            ImagePayload upload = readImage(form.getLicenseFront(), "licenseFront");
-            profile.setLicenseFront(upload.data());
+            DocumentUpload upload = uploadProfileDocument(userId, form.getLicenseFront(), "license-front");
+            profile.setLicenseFrontObject(upload.objectName());
+            profile.setLicenseFront(null);
             profile.setLicenseFrontContentType(upload.contentType());
         }
         if (form.getLicenseBack() != null && !form.getLicenseBack().isEmpty()) {
-            ImagePayload upload = readImage(form.getLicenseBack(), "licenseBack");
-            profile.setLicenseBack(upload.data());
+            DocumentUpload upload = uploadProfileDocument(userId, form.getLicenseBack(), "license-back");
+            profile.setLicenseBackObject(upload.objectName());
+            profile.setLicenseBack(null);
             profile.setLicenseBackContentType(upload.contentType());
         }
         if (form.getGovIdFront() != null && !form.getGovIdFront().isEmpty()) {
-            ImagePayload upload = readImage(form.getGovIdFront(), "govIdFront");
-            profile.setGovIdFront(upload.data());
+            DocumentUpload upload = uploadProfileDocument(userId, form.getGovIdFront(), "gov-id-front");
+            profile.setGovIdFrontObject(upload.objectName());
+            profile.setGovIdFront(null);
             profile.setGovIdFrontContentType(upload.contentType());
         }
         if (form.getGovIdBack() != null && !form.getGovIdBack().isEmpty()) {
-            ImagePayload upload = readImage(form.getGovIdBack(), "govIdBack");
-            profile.setGovIdBack(upload.data());
+            DocumentUpload upload = uploadProfileDocument(userId, form.getGovIdBack(), "gov-id-back");
+            profile.setGovIdBackObject(upload.objectName());
+            profile.setGovIdBack(null);
             profile.setGovIdBackContentType(upload.contentType());
         }
 
@@ -171,19 +193,15 @@ public class DriverProfileService {
         return toView(updated);
     }
 
-    private ImagePayload readImage(MultipartFile file, String fieldName) {
-        if (file.getSize() > MAX_IMAGE_BYTES) {
-            throw new IllegalArgumentException(fieldName + " must be 5 MB or smaller");
-        }
-        String contentType = file.getContentType();
-        if (!StringUtils.hasText(contentType) || !contentType.toLowerCase().startsWith("image/")) {
-            throw new IllegalArgumentException(fieldName + " must be an image file");
-        }
-        try {
-            return new ImagePayload(file.getBytes(), contentType);
+    private DocumentUpload uploadProfileDocument(Long userId, MultipartFile file, String label) {
+        String contentType = validateImage(file, label);
+        String objectName = DocumentPathBuilder.profileDocument(userId, label);
+        try (InputStream inputStream = file.getInputStream()) {
+            documentStorageService.upload(objectName, inputStream, file.getSize(), contentType);
         } catch (IOException ex) {
-            throw new IllegalArgumentException("Failed to read uploaded file for " + fieldName, ex);
+            throw new IllegalArgumentException("Failed to read uploaded file for " + label, ex);
         }
+        return new DocumentUpload(objectName, contentType);
     }
 
     private DriverProfileView toView(DriverProfile profile) {
@@ -221,7 +239,8 @@ public class DriverProfileService {
                 profile.getBatchNumber(),
                 profile.getBatchExpiryDate(),
                 profile.getFatherName(),
-                profile.getStatus());
+                profile.getStatus(),
+                getFieldVerifications(profile.getUserId()));
     }
 
     private LocalDate parseDate(String dob, LocalDate fallback) {
@@ -246,5 +265,48 @@ public class DriverProfileService {
         }
     }
 
-    private record ImagePayload(byte[] data, String contentType) {}
+    private String validateImage(MultipartFile file, String fieldName) {
+        if (file.getSize() > MAX_IMAGE_BYTES) {
+            throw new IllegalArgumentException(fieldName + " must be 5 MB or smaller");
+        }
+        String contentType = file.getContentType();
+        if (!StringUtils.hasText(contentType) || !contentType.toLowerCase().startsWith("image/")) {
+            throw new IllegalArgumentException(fieldName + " must be an image file");
+        }
+        return contentType;
+    }
+
+    private List<DriverFieldVerificationView> getFieldVerifications(Long driverId) {
+        List<DriverFieldVerification> existingVerifications = driverFieldVerificationRepository.findByDriverId(driverId);
+
+        Map<String, DriverFieldVerification> verificationMap = existingVerifications.stream()
+                .collect(Collectors.toMap(DriverFieldVerification::getFieldName, v -> v));
+
+        return DriverFieldVerificationFields.all().stream()
+                .map(fieldName -> {
+                    DriverFieldVerification verification = verificationMap.get(fieldName);
+                    if (verification != null) {
+                        return toFieldView(verification);
+                    }
+                    return new DriverFieldVerificationView(
+                            fieldName,
+                            DriverFieldVerificationStatus.PENDING,
+                            null,
+                            null,
+                            null);
+                })
+                .sorted(Comparator.comparing(DriverFieldVerificationView::fieldName))
+                .toList();
+    }
+
+    private DriverFieldVerificationView toFieldView(DriverFieldVerification verification) {
+        return new DriverFieldVerificationView(
+                verification.getFieldName(),
+                verification.getStatus(),
+                verification.getNotes(),
+                verification.getVerifiedByAdminId(),
+                verification.getVerifiedAt());
+    }
+
+    private record DocumentUpload(String objectName, String contentType) {}
 }
