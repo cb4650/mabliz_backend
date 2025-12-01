@@ -1,5 +1,6 @@
 package com.dztech.auth.service;
 
+import com.dztech.auth.dto.DriverDocumentView;
 import com.dztech.auth.dto.DriverFieldVerificationView;
 import com.dztech.auth.dto.DriverProfileUpdateForm;
 import com.dztech.auth.dto.DriverProfileView;
@@ -11,10 +12,12 @@ import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.DriverFieldVerificationRepository;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.UserProfileRepository;
+import com.dztech.auth.security.DocumentTokenService;
 import com.dztech.auth.storage.DocumentPathBuilder;
 import com.dztech.auth.storage.DocumentStorageService;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Base64;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -38,18 +41,24 @@ public class DriverProfileService {
     private final UserProfileRepository userProfileRepository;
     private final DriverFieldVerificationRepository driverFieldVerificationRepository;
     private final DocumentStorageService documentStorageService;
+    private final DriverDocumentUrlBuilder driverDocumentUrlBuilder;
+    private final DocumentTokenService documentTokenService;
 
     public DriverProfileService(
             DriverProfileRepository driverProfileRepository,
             DriverEmailOtpService driverEmailOtpService,
             UserProfileRepository userProfileRepository,
             DriverFieldVerificationRepository driverFieldVerificationRepository,
-            DocumentStorageService documentStorageService) {
+            DocumentStorageService documentStorageService,
+            DriverDocumentUrlBuilder driverDocumentUrlBuilder,
+            DocumentTokenService documentTokenService) {
         this.driverProfileRepository = driverProfileRepository;
         this.driverEmailOtpService = driverEmailOtpService;
         this.userProfileRepository = userProfileRepository;
         this.driverFieldVerificationRepository = driverFieldVerificationRepository;
         this.documentStorageService = documentStorageService;
+        this.driverDocumentUrlBuilder = driverDocumentUrlBuilder;
+        this.documentTokenService = documentTokenService;
     }
 
     @Transactional(readOnly = true)
@@ -239,8 +248,55 @@ public class DriverProfileService {
                 profile.getBatchNumber(),
                 profile.getBatchExpiryDate(),
                 profile.getFatherName(),
+                toDocument(
+                        profile.getUserId(),
+                        "profilePhoto",
+                        profile.getProfilePhotoObject(),
+                        profile.getProfilePhoto(),
+                        profile.getProfilePhotoContentType()),
+                toDocument(
+                        profile.getUserId(),
+                        "licenseFront",
+                        profile.getLicenseFrontObject(),
+                        profile.getLicenseFront(),
+                        profile.getLicenseFrontContentType()),
+                toDocument(
+                        profile.getUserId(),
+                        "licenseBack",
+                        profile.getLicenseBackObject(),
+                        profile.getLicenseBack(),
+                        profile.getLicenseBackContentType()),
+                toDocument(
+                        profile.getUserId(),
+                        "govIdFront",
+                        profile.getGovIdFrontObject(),
+                        profile.getGovIdFront(),
+                        profile.getGovIdFrontContentType()),
+                toDocument(
+                        profile.getUserId(),
+                        "govIdBack",
+                        profile.getGovIdBackObject(),
+                        profile.getGovIdBack(),
+                        profile.getGovIdBackContentType()),
                 profile.getStatus(),
                 getFieldVerifications(profile.getUserId()));
+    }
+
+    private DriverDocumentView toDocument(
+            Long driverId, String label, String objectName, byte[] legacyData, String contentType) {
+        if (!StringUtils.hasText(objectName) && (legacyData == null || legacyData.length == 0)) {
+            return null;
+        }
+
+        String token = documentTokenService.issueProfileDocumentToken(driverId, label);
+        String url = driverDocumentUrlBuilder.profileDocument(driverId, label, token);
+
+        String encoded = null;
+        if (legacyData != null && legacyData.length > 0) {
+            encoded = Base64.getEncoder().encodeToString(legacyData);
+        }
+
+        return new DriverDocumentView(label, contentType, encoded, url);
     }
 
     private LocalDate parseDate(String dob, LocalDate fallback) {

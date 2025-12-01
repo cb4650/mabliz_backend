@@ -17,6 +17,8 @@ import com.dztech.auth.model.UserProfile;
 import com.dztech.auth.repository.DriverFieldVerificationRepository;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.UserProfileRepository;
+import com.dztech.auth.security.DocumentTokenService;
+import com.dztech.auth.service.DriverDocumentUrlBuilder;
 import com.dztech.auth.storage.DocumentPathBuilder;
 import com.dztech.auth.storage.DocumentStorageService;
 import java.util.List;
@@ -46,18 +48,35 @@ class DriverProfileServiceTest {
     @Mock
     private DocumentStorageService documentStorageService;
 
+    @Mock
+    private DriverDocumentUrlBuilder driverDocumentUrlBuilder;
+
+    @Mock
+    private DocumentTokenService documentTokenService;
+
     private DriverProfileService driverProfileService;
 
     @BeforeEach
     void setUp() {
         when(userProfileRepository.findByUserId(anyLong())).thenReturn(Optional.empty());
         when(driverFieldVerificationRepository.findByDriverId(anyLong())).thenReturn(List.of());
+        when(documentStorageService.getPresignedUrl(any())).thenReturn(Optional.empty());
+        when(documentTokenService.issueProfileDocumentToken(anyLong(), any()))
+                .thenReturn("doc-token");
+        when(driverDocumentUrlBuilder.profileDocument(anyLong(), any(), any())).thenAnswer(invocation -> {
+            Long driverId = invocation.getArgument(0);
+            String label = invocation.getArgument(1);
+            String token = invocation.getArgument(2);
+            return "/api/driver/profile/documents/%d/%s?token=%s".formatted(driverId, label, token);
+        });
         driverProfileService = new DriverProfileService(
                 driverProfileRepository,
                 driverEmailOtpService,
                 userProfileRepository,
                 driverFieldVerificationRepository,
-                documentStorageService);
+                documentStorageService,
+                driverDocumentUrlBuilder,
+                documentTokenService);
     }
 
     @Test
@@ -105,6 +124,9 @@ class DriverProfileServiceTest {
                         .email("new@example.com")
                         .emailVerified(true)
                         .build()));
+        when(documentTokenService.issueProfileDocumentToken(10L, "profilePhoto")).thenReturn("doc-token");
+        when(driverDocumentUrlBuilder.profileDocument(10L, "profilePhoto", "doc-token"))
+                .thenReturn("/api/driver/profile/documents/10/profilePhoto?token=doc-token");
 
         DriverProfileUpdateForm form = new DriverProfileUpdateForm();
         form.setFullName("New Name");
@@ -126,6 +148,9 @@ class DriverProfileServiceTest {
         assertThat(profile.getProfilePhoto()).isNull();
         assertThat(profile.getDob()).isEqualTo("1990-05-20");
         assertThat(profile.getExperience()).isEqualTo("5");
+        assertThat(view.profilePhoto().url())
+                .isEqualTo("/api/driver/profile/documents/10/profilePhoto?token=doc-token");
+        assertThat(view.profilePhoto().contentType()).isEqualTo("image/jpeg");
         verify(driverEmailOtpService).sendOtp(10L, "new@example.com", "New Name");
         verify(documentStorageService)
                 .upload(

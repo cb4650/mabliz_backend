@@ -34,6 +34,11 @@ public record DriverProfileView(
         String batchNumber,
         String batchExpiryDate,
         String fatherName,
+        DriverDocumentView profilePhoto,
+        DriverDocumentView licenseFront,
+        DriverDocumentView licenseBack,
+        DriverDocumentView govIdFront,
+        DriverDocumentView govIdBack,
         DriverProfileStatus status,
         List<DriverFieldVerificationView> fieldVerifications) {
 }

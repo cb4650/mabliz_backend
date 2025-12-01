@@ -19,6 +19,7 @@ import com.dztech.auth.model.DriverVehicle;
 import com.dztech.auth.repository.DriverFieldVerificationRepository;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.DriverVehicleRepository;
+import com.dztech.auth.security.DocumentTokenService;
 import com.dztech.auth.storage.DocumentStorageService;
 import java.time.Instant;
 import java.util.Base64;
@@ -39,16 +40,22 @@ public class AdminDriverManagementService {
     private final DriverFieldVerificationRepository driverFieldVerificationRepository;
     private final DriverVehicleRepository driverVehicleRepository;
     private final DocumentStorageService documentStorageService;
+    private final DriverDocumentUrlBuilder driverDocumentUrlBuilder;
+    private final DocumentTokenService documentTokenService;
 
     public AdminDriverManagementService(
             DriverProfileRepository driverProfileRepository,
             DriverFieldVerificationRepository driverFieldVerificationRepository,
             DriverVehicleRepository driverVehicleRepository,
-            DocumentStorageService documentStorageService) {
+            DocumentStorageService documentStorageService,
+            DriverDocumentUrlBuilder driverDocumentUrlBuilder,
+            DocumentTokenService documentTokenService) {
         this.driverProfileRepository = driverProfileRepository;
         this.driverFieldVerificationRepository = driverFieldVerificationRepository;
         this.driverVehicleRepository = driverVehicleRepository;
         this.documentStorageService = documentStorageService;
+        this.driverDocumentUrlBuilder = driverDocumentUrlBuilder;
+        this.documentTokenService = documentTokenService;
     }
 
     @Transactional(readOnly = true)
@@ -221,30 +228,40 @@ public class AdminDriverManagementService {
                 profile.getBatchExpiryDate(),
                 profile.getFatherName(),
                 toDocument(
+                        profile.getUserId(),
                         "profilePhoto",
                         profile.getProfilePhotoObject(),
                         profile.getProfilePhoto(),
-                        profile.getProfilePhotoContentType()),
+                        profile.getProfilePhotoContentType(),
+                        true),
                 toDocument(
+                        profile.getUserId(),
                         "licenseFront",
                         profile.getLicenseFrontObject(),
                         profile.getLicenseFront(),
-                        profile.getLicenseFrontContentType()),
+                        profile.getLicenseFrontContentType(),
+                        true),
                 toDocument(
+                        profile.getUserId(),
                         "licenseBack",
                         profile.getLicenseBackObject(),
                         profile.getLicenseBack(),
-                        profile.getLicenseBackContentType()),
+                        profile.getLicenseBackContentType(),
+                        true),
                 toDocument(
+                        profile.getUserId(),
                         "govIdFront",
                         profile.getGovIdFrontObject(),
                         profile.getGovIdFront(),
-                        profile.getGovIdFrontContentType()),
+                        profile.getGovIdFrontContentType(),
+                        true),
                 toDocument(
+                        profile.getUserId(),
                         "govIdBack",
                         profile.getGovIdBackObject(),
                         profile.getGovIdBack(),
-                        profile.getGovIdBackContentType()));
+                        profile.getGovIdBackContentType(),
+                        true));
     }
 
     private DriverVehicleDetailView toVehicleDetailView(DriverVehicle vehicle) {
@@ -257,23 +274,30 @@ public class AdminDriverManagementService {
                 vehicle.getBrand(),
                 vehicle.getModel(),
                 toDocument(
+                        vehicle.getUserId(),
                         "rc",
                         vehicle.getRcImageObject(),
                         vehicle.getRcImage(),
-                        vehicle.getRcImageContentType()),
+                        vehicle.getRcImageContentType(),
+                        false),
                 toDocument(
+                        vehicle.getUserId(),
                         "insurance",
                         vehicle.getInsuranceImageObject(),
                         vehicle.getInsuranceImage(),
-                        vehicle.getInsuranceImageContentType()),
+                        vehicle.getInsuranceImageContentType(),
+                        false),
                 toDocument(
+                        vehicle.getUserId(),
                         "pollution",
                         vehicle.getPollutionCertificateImageObject(),
                         vehicle.getPollutionCertificateImage(),
-                        vehicle.getPollutionCertificateImageContentType()));
+                        vehicle.getPollutionCertificateImageContentType(),
+                        false));
     }
 
-    private DriverDocumentView toDocument(String label, String objectName, byte[] legacyData, String contentType) {
+    private DriverDocumentView toDocument(
+            Long driverId, String label, String objectName, byte[] legacyData, String contentType, boolean profileDocument) {
         if (!StringUtils.hasText(objectName) && (legacyData == null || legacyData.length == 0)) {
             return null;
         }
@@ -287,7 +311,10 @@ public class AdminDriverManagementService {
                     .orElse(null);
         }
         String url = null;
-        if (StringUtils.hasText(objectName)) {
+        if (profileDocument) {
+            String token = documentTokenService.issueProfileDocumentToken(driverId, label);
+            url = driverDocumentUrlBuilder.profileDocument(driverId, label, token);
+        } else if (StringUtils.hasText(objectName)) {
             url = documentStorageService.getPresignedUrl(objectName).orElse(null);
         }
         return new DriverDocumentView(label, contentType, encoded, url);
