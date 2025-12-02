@@ -19,6 +19,7 @@ public class ForceUpdateService {
 
     @Transactional(readOnly = true)
     public ForceUpdateResponse getVersionByAppIdAndPlatform(String appId, ForceUpdate.Platform platform) {
+        System.out.println("appId: " + appId + ", platform: " + platform);
         ForceUpdate forceUpdate = forceUpdateRepository.findByAppIdAndPlatform(appId, platform)
                 .orElseThrow(() -> new ResourceNotFoundException("Version not found for appId: " + appId + ", platform: " + platform));
         return ForceUpdateResponse.fromEntity(forceUpdate);
