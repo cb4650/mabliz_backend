@@ -1,10 +1,10 @@
-package com.dztech.rayder.service;
+package com.dztech.auth.service;
 
-import com.dztech.rayder.dto.ForceUpdateResponse;
-import com.dztech.rayder.dto.UpdateForceUpdateRequest;
-import com.dztech.rayder.exception.ResourceNotFoundException;
-import com.dztech.rayder.model.ForceUpdate;
-import com.dztech.rayder.repository.ForceUpdateRepository;
+import com.dztech.auth.dto.ForceUpdateResponse;
+import com.dztech.auth.dto.UpdateForceUpdateRequest;
+import com.dztech.auth.exception.ResourceNotFoundException;
+import com.dztech.auth.model.ForceUpdate;
+import com.dztech.auth.repository.ForceUpdateRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -1,4 +1,4 @@
-package com.dztech.rayder.model;
+package com.dztech.auth.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

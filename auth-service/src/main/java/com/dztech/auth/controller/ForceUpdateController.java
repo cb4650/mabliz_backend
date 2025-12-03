@@ -1,9 +1,9 @@
-package com.dztech.rayder.controller;
+package com.dztech.auth.controller;
 
-import com.dztech.rayder.dto.ForceUpdateResponse;
-import com.dztech.rayder.dto.UpdateForceUpdateRequest;
-import com.dztech.rayder.model.ForceUpdate;
-import com.dztech.rayder.service.ForceUpdateService;
+import com.dztech.auth.dto.ForceUpdateResponse;
+import com.dztech.auth.dto.UpdateForceUpdateRequest;
+import com.dztech.auth.model.ForceUpdate;
+import com.dztech.auth.service.ForceUpdateService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

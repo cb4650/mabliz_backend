@@ -1,6 +1,6 @@
-package com.dztech.rayder.dto;
+package com.dztech.auth.dto;
 
-import com.dztech.rayder.model.ForceUpdate;
+import com.dztech.auth.model.ForceUpdate;
 
 public record ForceUpdateResponse(
         String appId,

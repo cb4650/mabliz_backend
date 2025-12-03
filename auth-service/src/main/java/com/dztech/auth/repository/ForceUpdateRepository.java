@@ -1,6 +1,6 @@
-package com.dztech.rayder.repository;
+package com.dztech.auth.repository;
 
-import com.dztech.rayder.model.ForceUpdate;
+import com.dztech.auth.model.ForceUpdate;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
