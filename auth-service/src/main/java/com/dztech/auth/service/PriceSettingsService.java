@@ -5,6 +5,7 @@ import com.dztech.auth.dto.CommissionSettingsView;
 import com.dztech.auth.dto.PriceSettingsResponse;
 import com.dztech.auth.dto.PriceSettingsView;
 import com.dztech.auth.dto.UpdatePriceSettingsRequest;
+import com.dztech.auth.dto.UpdatePriceSettingsResponse;
 import com.dztech.auth.exception.ResourceNotFoundException;
 import com.dztech.auth.model.PriceSettings;
 import com.dztech.auth.repository.PriceSettingsRepository;
@@ -37,7 +38,7 @@ public class PriceSettingsService {
     }
 
     @Transactional
-    public void updatePriceSettings(Long classId, UpdatePriceSettingsRequest request) {
+    public UpdatePriceSettingsResponse updatePriceSettings(Long classId, UpdatePriceSettingsRequest request) {
         PriceSettings priceSettings = priceSettingsRepository.findById(classId)
                 .orElseThrow(() -> new ResourceNotFoundException("Price settings not found for class ID: " + classId));
 
@@ -56,6 +57,15 @@ public class PriceSettingsService {
         priceSettings.setFestivalCommission(commissionUpdate.getFestivalCommission());
 
         priceSettingsRepository.save(priceSettings);
+
+        return UpdatePriceSettingsResponse.builder()
+                .status("success")
+                .message("Price settings updated successfully for class: " + priceSettings.getClassName())
+                .data(UpdatePriceSettingsResponse.PriceSettingsData.builder()
+                        .classId(classId.toString())
+                        .className(priceSettings.getClassName())
+                        .build())
+                .build();
     }
 
     private ClassPriceSettingsView mapToClassPriceSettingsView(PriceSettings entity) {

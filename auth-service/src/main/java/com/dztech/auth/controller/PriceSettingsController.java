@@ -2,6 +2,7 @@ package com.dztech.auth.controller;
 
 import com.dztech.auth.dto.PriceSettingsResponse;
 import com.dztech.auth.dto.UpdatePriceSettingsRequest;
+import com.dztech.auth.dto.UpdatePriceSettingsResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,10 +29,10 @@ public class PriceSettingsController {
     }
 
     @PutMapping("/{classId}")
-    public ResponseEntity<Void> updatePriceSettings(
+    public ResponseEntity<UpdatePriceSettingsResponse> updatePriceSettings(
             @PathVariable Long classId,
             @Valid @RequestBody UpdatePriceSettingsRequest request) {
-        priceSettingsService.updatePriceSettings(classId, request);
-        return ResponseEntity.ok().build();
+        UpdatePriceSettingsResponse response = priceSettingsService.updatePriceSettings(classId, request);
+        return ResponseEntity.ok(response);
     }
 }
