@@ -24,7 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class DriverVehicleService {
 
-    private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
+    private static final long MAX_IMAGE_BYTES = 50L * 1024 * 1024;
     private static final List<DateTimeFormatter> INSURANCE_DATE_FORMATTERS = List.of(
             DateTimeFormatter.ofPattern("dd-MM-uuuu", Locale.US), DateTimeFormatter.ISO_DATE);
 

@@ -34,7 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class DriverProfileService {
 
     private static final DateTimeFormatter DOB_FORMATTER = DateTimeFormatter.ISO_DATE;
-    private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
+    private static final long MAX_IMAGE_BYTES = 50L * 1024 * 1024;
 
     private final DriverProfileRepository driverProfileRepository;
     private final DriverEmailOtpService driverEmailOtpService;
