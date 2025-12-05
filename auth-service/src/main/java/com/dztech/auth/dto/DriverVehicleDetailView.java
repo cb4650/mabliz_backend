@@ -6,7 +6,7 @@ public record DriverVehicleDetailView(
         Long vehicleId,
         String vehicleNumber,
         String vehicleType,
-        String rcNumber,
+        String manufacturedYear,
         LocalDate insuranceExpiryDate,
         String brand,
         String model,

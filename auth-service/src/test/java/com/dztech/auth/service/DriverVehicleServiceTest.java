@@ -118,7 +118,7 @@ class DriverVehicleServiceTest {
         DriverVehicleCreateRequest request = new DriverVehicleCreateRequest();
         request.setVehicleNumber("tn09ab1234");
         request.setVehicleType("private");
-        request.setRcNumber("rc12345");
+        request.setManufacturedYear("05/2021");
         request.setInsuranceExpiryDate("31-12-2025");
         request.setBrand("Toyota");
         request.setModel("Innova Crysta");

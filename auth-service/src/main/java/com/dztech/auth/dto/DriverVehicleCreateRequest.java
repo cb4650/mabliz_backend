@@ -14,9 +14,9 @@ public class DriverVehicleCreateRequest {
     @NotBlank(message = "vehicleType is required")
     private String vehicleType;
 
-    @NotBlank(message = "rcNumber is required")
-    @Size(max = 50, message = "rcNumber must be at most 50 characters")
-    private String rcNumber;
+    @NotBlank(message = "manufacturedYear is required")
+    @Size(max = 7, message = "manufacturedYear must be at most 7 characters")
+    private String manufacturedYear;
 
     @NotBlank(message = "insuranceExpiryDate is required")
     private String insuranceExpiryDate;
@@ -54,12 +54,12 @@ public class DriverVehicleCreateRequest {
         this.vehicleType = vehicleType;
     }
 
-    public String getRcNumber() {
-        return rcNumber;
+    public String getManufacturedYear() {
+        return manufacturedYear;
     }
 
-    public void setRcNumber(String rcNumber) {
-        this.rcNumber = rcNumber;
+    public void setManufacturedYear(String manufacturedYear) {
+        this.manufacturedYear = manufacturedYear;
     }
 
     public String getInsuranceExpiryDate() {

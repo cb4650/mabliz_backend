@@ -65,7 +65,7 @@ public class DriverVehicleService {
                 .userId(userId)
                 .vehicleNumber(vehicleNumber)
                 .vehicleType(vehicleType)
-                .rcNumber(normalizeIdentifier(request.getRcNumber()))
+                .manufacturedYear(normalize(request.getManufacturedYear()))
                 .rcImageObject(rcImageObject)
                 .rcImageContentType(request.getRcImage().getContentType())
                 .insuranceExpiryDate(insuranceExpiryDate)
@@ -86,7 +86,7 @@ public class DriverVehicleService {
                 vehicle.getId(),
                 vehicle.getVehicleNumber(),
                 vehicle.getVehicleType().name().toLowerCase(Locale.ROOT),
-                vehicle.getRcNumber(),
+                vehicle.getManufacturedYear(),
                 vehicle.getInsuranceExpiryDate(),
                 vehicle.getBrand(),
                 vehicle.getModel());

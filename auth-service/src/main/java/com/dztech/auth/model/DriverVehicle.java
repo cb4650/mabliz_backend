@@ -49,8 +49,8 @@ public class DriverVehicle {
     @Column(name = "vehicle_type", nullable = false, length = 20)
     private VehicleType vehicleType;
 
-    @Column(name = "rc_number", nullable = false, length = 50)
-    private String rcNumber;
+    @Column(name = "manufactured_year", nullable = false, length = 7)
+    private String manufacturedYear;
 
     @Lob
     @Column(name = "rc_image", columnDefinition = "LONGBLOB")

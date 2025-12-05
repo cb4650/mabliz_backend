@@ -269,7 +269,7 @@ public class AdminDriverManagementService {
                 vehicle.getId(),
                 vehicle.getVehicleNumber(),
                 vehicle.getVehicleType() == null ? null : vehicle.getVehicleType().name().toLowerCase(Locale.ROOT),
-                vehicle.getRcNumber(),
+                vehicle.getManufacturedYear(),
                 vehicle.getInsuranceExpiryDate(),
                 vehicle.getBrand(),
                 vehicle.getModel(),
