@@ -304,18 +304,16 @@ public class AdminDriverManagementService {
         String encoded = null;
         if (legacyData != null && legacyData.length > 0) {
             encoded = Base64.getEncoder().encodeToString(legacyData);
-        } else if (StringUtils.hasText(objectName)) {
-            encoded = documentStorageService
-                    .download(objectName)
-                    .map(bytes -> Base64.getEncoder().encodeToString(bytes))
-                    .orElse(null);
         }
-        String url = null;
+
+        String url;
         if (profileDocument) {
             String token = documentTokenService.issueProfileDocumentToken(driverId, label);
             url = driverDocumentUrlBuilder.profileDocument(driverId, label, token);
         } else if (StringUtils.hasText(objectName)) {
             url = documentStorageService.getPresignedUrl(objectName).orElse(null);
+        } else {
+            url = null;
         }
         return new DriverDocumentView(label, contentType, encoded, url);
     }
