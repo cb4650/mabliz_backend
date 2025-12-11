@@ -34,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/login").permitAll()
                         .requestMatchers("/api/admin/otp/request").permitAll()
                         .requestMatchers("/api/driver/profile/documents/**").permitAll()
+                        .requestMatchers("/api/driver/vehicles/documents/**").permitAll()
                         .requestMatchers("/api/force-update/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/driver/email/otp", "/api/driver/email/verify").authenticated()

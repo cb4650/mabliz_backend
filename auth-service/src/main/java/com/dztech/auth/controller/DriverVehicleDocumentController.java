@@ -3,7 +3,7 @@ package com.dztech.auth.controller;
 import com.dztech.auth.security.DocumentTokenService;
 import com.dztech.auth.security.JwtAuthenticatedUser;
 import com.dztech.auth.security.JwtAuthenticationToken;
-import com.dztech.auth.service.DriverDocumentAccessService;
+import com.dztech.auth.service.DriverVehicleDocumentAccessService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -19,22 +19,23 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/driver/profile/documents")
-public class DriverDocumentController {
+@RequestMapping("/api/driver/vehicles/documents")
+public class DriverVehicleDocumentController {
 
-    private final DriverDocumentAccessService driverDocumentAccessService;
+    private final DriverVehicleDocumentAccessService driverVehicleDocumentAccessService;
     private final DocumentTokenService documentTokenService;
 
-    public DriverDocumentController(
-            DriverDocumentAccessService driverDocumentAccessService, DocumentTokenService documentTokenService) {
-        this.driverDocumentAccessService = driverDocumentAccessService;
+    public DriverVehicleDocumentController(
+            DriverVehicleDocumentAccessService driverVehicleDocumentAccessService,
+            DocumentTokenService documentTokenService) {
+        this.driverVehicleDocumentAccessService = driverVehicleDocumentAccessService;
         this.documentTokenService = documentTokenService;
     }
 
-    @GetMapping("/{driverId}/{label}")
-    public ResponseEntity<byte[]> getProfileDocument(
+    @GetMapping("/{vehicleId}/{label}")
+    public ResponseEntity<byte[]> getVehicleDocument(
             Authentication authentication,
-            @PathVariable Long driverId,
+            @PathVariable Long vehicleId,
             @PathVariable String label,
             @RequestParam(value = "token", required = false) String token) {
         Long requesterId = null;
@@ -51,8 +52,8 @@ public class DriverDocumentController {
 
         if (StringUtils.hasText(token)) {
             DocumentTokenService.DocumentTokenClaims claims = documentTokenService.parse(token);
-            if (!DocumentTokenService.SCOPE_PROFILE_DOCUMENT.equals(claims.scope())
-                    || !driverId.equals(claims.driverId())
+            if (!DocumentTokenService.SCOPE_VEHICLE_DOCUMENT.equals(claims.scope())
+                    || !vehicleId.equals(claims.vehicleId())
                     || !label.equalsIgnoreCase(claims.label())) {
                 throw new AccessDeniedException("Invalid document token");
             }
@@ -62,8 +63,8 @@ public class DriverDocumentController {
             throw new AccessDeniedException("Authentication is required");
         }
 
-        DriverDocumentAccessService.DriverDocumentResource document = driverDocumentAccessService.getProfileDocument(
-                requesterId, isAdmin, driverId, label);
+        DriverVehicleDocumentAccessService.DriverDocumentResource document =
+                driverVehicleDocumentAccessService.getVehicleDocument(requesterId, isAdmin, vehicleId, label);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(document.contentType()));

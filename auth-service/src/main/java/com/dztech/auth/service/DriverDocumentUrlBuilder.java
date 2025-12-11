@@ -23,6 +23,14 @@ public class DriverDocumentUrlBuilder {
         return base + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
     }
 
+    public String vehicleDocument(Long vehicleId, String label, String token) {
+        String base = "%s/api/driver/vehicles/documents/%d/%s".formatted(publicApiPrefix, vehicleId, label);
+        if (!StringUtils.hasText(token)) {
+            return base;
+        }
+        return base + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
+    }
+
     private String normalizePrefix(String raw) {
         if (!StringUtils.hasText(raw)) {
             return "";

@@ -21,7 +21,8 @@ import org.springframework.util.StringUtils;
 @Component
 public class DocumentTokenService {
 
-    private static final String SCOPE_PROFILE_DOCUMENT = "driver-doc";
+    public static final String SCOPE_PROFILE_DOCUMENT = "driver-doc";
+    public static final String SCOPE_VEHICLE_DOCUMENT = "driver-vehicle-doc";
 
     private final SecretKey signingKey;
     private final JwtParser parser;
@@ -62,6 +63,22 @@ public class DocumentTokenService {
                 .compact();
     }
 
+    public String issueVehicleDocumentToken(Long driverId, Long vehicleId, String label) {
+        Instant now = Instant.now();
+        Instant expiry = now.plus(ttl);
+        return Jwts.builder()
+                .setId(UUID.randomUUID().toString())
+                .setIssuer(issuer)
+                .setIssuedAt(Date.from(now))
+                .setExpiration(Date.from(expiry))
+                .claim("driverId", driverId)
+                .claim("vehicleId", vehicleId)
+                .claim("label", label)
+                .claim("scope", SCOPE_VEHICLE_DOCUMENT)
+                .signWith(signingKey, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     public DocumentTokenClaims parse(String token) {
         if (!StringUtils.hasText(token)) {
             throw new AccessDeniedException("Document token is required");
@@ -69,12 +86,21 @@ public class DocumentTokenService {
         try {
             Claims claims = parser.parseClaimsJws(token).getBody();
             Long driverId = claims.get("driverId", Long.class);
+            Long vehicleId = claims.get("vehicleId", Long.class);
             String label = claims.get("label", String.class);
             String scope = claims.get("scope", String.class);
-            if (driverId == null || !StringUtils.hasText(label) || !SCOPE_PROFILE_DOCUMENT.equals(scope)) {
+            if (driverId == null || !StringUtils.hasText(label) || !StringUtils.hasText(scope)) {
                 throw new AccessDeniedException("Invalid document token");
             }
-            return new DocumentTokenClaims(driverId, label, scope);
+            boolean validProfileScope = SCOPE_PROFILE_DOCUMENT.equals(scope);
+            boolean validVehicleScope = SCOPE_VEHICLE_DOCUMENT.equals(scope);
+            if (!validProfileScope && !validVehicleScope) {
+                throw new AccessDeniedException("Invalid document token");
+            }
+            if (validVehicleScope && vehicleId == null) {
+                throw new AccessDeniedException("Invalid document token");
+            }
+            return new DocumentTokenClaims(driverId, vehicleId, label, scope);
         } catch (ExpiredJwtException ex) {
             throw new AccessDeniedException("Document token expired");
         } catch (JwtException ex) {
@@ -82,5 +108,5 @@ public class DocumentTokenService {
         }
     }
 
-    public record DocumentTokenClaims(Long driverId, String label, String scope) {}
+    public record DocumentTokenClaims(Long driverId, Long vehicleId, String label, String scope) {}
 }
