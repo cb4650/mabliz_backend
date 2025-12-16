@@ -8,6 +8,7 @@ import com.dztech.rayder.service.DriverRequestService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,5 +36,14 @@ public class DriverRequestController {
         DriverRequestAcknowledgement response =
                 new DriverRequestAcknowledgement(true, "Driver request submitted", details);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{bookingId}/confirm")
+    public ResponseEntity<DriverRequestAcknowledgement> confirmRequest(@PathVariable Long bookingId) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        DriverRequestDetails details = driverRequestService.confirmDriverRequest(userId, bookingId);
+        DriverRequestAcknowledgement response =
+                new DriverRequestAcknowledgement(true, "Booking confirmed", details);
+        return ResponseEntity.ok(response);
     }
 }

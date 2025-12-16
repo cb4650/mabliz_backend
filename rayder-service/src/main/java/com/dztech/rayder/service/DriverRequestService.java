@@ -8,12 +8,17 @@ import com.dztech.rayder.model.DriverRequest;
 import com.dztech.rayder.model.Vehicle;
 import com.dztech.rayder.repository.DriverRequestRepository;
 import com.dztech.rayder.repository.VehicleRepository;
+import java.math.BigDecimal;
 import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DriverRequestService {
+
+    private static final BigDecimal DEFAULT_CHARGE = new BigDecimal("250.00");
+    private static final String STATUS_PENDING = "PENDING";
+    private static final String STATUS_CONFIRMED = "CONFIRMED";
 
     private final DriverRequestRepository driverRequestRepository;
     private final VehicleRepository vehicleRepository;
@@ -28,6 +33,7 @@ public class DriverRequestService {
     @Transactional
     public DriverRequestDetails createDriverRequest(Long userId, CreateDriverRequest request) {
         validateTimeRange(request.startTime(), request.endTime());
+        FareBreakup breakup = calculateFareBreakup();
 
         Vehicle vehicle = vehicleRepository.findByIdAndUserId(request.vehicleId(), userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found for current user"));
@@ -46,9 +52,26 @@ public class DriverRequestService {
                 .dropAddress(request.drop().address().trim())
                 .dropLatitude(request.drop().latitude())
                 .dropLongitude(request.drop().longitude())
+                .status(STATUS_PENDING)
+                .estimate(breakup.estimate())
+                .baseFare(breakup.baseFare())
+                .lateNightCharges(breakup.lateNightCharges())
+                .extraHourCharges(breakup.extraHourCharges())
+                .festivalCharges(breakup.festivalCharges())
                 .build();
 
         DriverRequest saved = driverRequestRepository.save(entity);
+        return toDetails(saved);
+    }
+
+    @Transactional
+    public DriverRequestDetails confirmDriverRequest(Long userId, Long bookingId) {
+        DriverRequest request = driverRequestRepository
+                .findByIdAndUserId(bookingId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found for current user"));
+
+        request.setStatus(STATUS_CONFIRMED);
+        DriverRequest saved = driverRequestRepository.save(request);
         return toDetails(saved);
     }
 
@@ -78,6 +101,32 @@ public class DriverRequestService {
                 request.getStartTime(),
                 request.getEndTime(),
                 pickup,
-                drop);
+                drop,
+                request.getStatus(),
+                request.getBaseFare(),
+                request.getLateNightCharges(),
+                request.getExtraHourCharges(),
+                request.getFestivalCharges(),
+                request.getEstimate());
+    }
+
+    private FareBreakup calculateFareBreakup() {
+        BigDecimal baseFare = DEFAULT_CHARGE;
+        BigDecimal lateNightCharges = DEFAULT_CHARGE;
+        BigDecimal extraHourCharges = DEFAULT_CHARGE;
+        BigDecimal festivalCharges = DEFAULT_CHARGE;
+        BigDecimal estimate = baseFare
+                .add(lateNightCharges)
+                .add(extraHourCharges)
+                .add(festivalCharges);
+        return new FareBreakup(baseFare, lateNightCharges, extraHourCharges, festivalCharges, estimate);
+    }
+
+    private record FareBreakup(
+            BigDecimal baseFare,
+            BigDecimal lateNightCharges,
+            BigDecimal extraHourCharges,
+            BigDecimal festivalCharges,
+            BigDecimal estimate) {
     }
 }

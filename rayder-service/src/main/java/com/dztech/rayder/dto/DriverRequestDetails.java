@@ -1,5 +1,6 @@
 package com.dztech.rayder.dto;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public record DriverRequestDetails(
@@ -11,5 +12,11 @@ public record DriverRequestDetails(
         Instant startTime,
         Instant endTime,
         DriverLocationResponse pickup,
-        DriverLocationResponse drop) {
+        DriverLocationResponse drop,
+        String bookingStatus,
+        BigDecimal baseFare,
+        BigDecimal lateNightCharges,
+        BigDecimal extraHourCharges,
+        BigDecimal festivalCharges,
+        BigDecimal estimate) {
 }

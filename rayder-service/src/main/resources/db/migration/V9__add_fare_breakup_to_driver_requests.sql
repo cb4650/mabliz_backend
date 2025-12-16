@@ -1,0 +1,5 @@
+ALTER TABLE driver_requests
+    ADD COLUMN base_fare DECIMAL(12, 2) NOT NULL DEFAULT 250.00,
+    ADD COLUMN late_night_charges DECIMAL(12, 2) NOT NULL DEFAULT 250.00,
+    ADD COLUMN extra_hour_charges DECIMAL(12, 2) NOT NULL DEFAULT 250.00,
+    ADD COLUMN festival_charges DECIMAL(12, 2) NOT NULL DEFAULT 250.00;

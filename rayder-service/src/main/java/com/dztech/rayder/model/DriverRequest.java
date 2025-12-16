@@ -74,10 +74,46 @@ public class DriverRequest {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "status", nullable = false, length = 20)
+    private String status;
+
+    @Column(name = "estimate", nullable = false, precision = 12, scale = 2)
+    private BigDecimal estimate;
+
+    @Column(name = "base_fare", nullable = false, precision = 12, scale = 2)
+    private BigDecimal baseFare;
+
+    @Column(name = "late_night_charges", nullable = false, precision = 12, scale = 2)
+    private BigDecimal lateNightCharges;
+
+    @Column(name = "extra_hour_charges", nullable = false, precision = 12, scale = 2)
+    private BigDecimal extraHourCharges;
+
+    @Column(name = "festival_charges", nullable = false, precision = 12, scale = 2)
+    private BigDecimal festivalCharges;
+
     @PrePersist
     private void onCreate() {
         if (createdAt == null) {
             createdAt = Instant.now();
+        }
+        if (status == null) {
+            status = "PENDING";
+        }
+        if (estimate == null) {
+            estimate = BigDecimal.ZERO;
+        }
+        if (baseFare == null) {
+            baseFare = BigDecimal.ZERO;
+        }
+        if (lateNightCharges == null) {
+            lateNightCharges = BigDecimal.ZERO;
+        }
+        if (extraHourCharges == null) {
+            extraHourCharges = BigDecimal.ZERO;
+        }
+        if (festivalCharges == null) {
+            festivalCharges = BigDecimal.ZERO;
         }
     }
 }
