@@ -76,7 +76,7 @@ public class AuthenticationService {
         }
 
         // Check if user is new (no existing profile)
-        boolean newUser = isNewUser(normalizedPhone, appId);
+        boolean newUser = isNewUserByAppId(normalizedPhone, appId);
 
         otpProviderClient.sendOtp(normalizedPhone, appId);
         return new OtpRequestResponse(true, "OTP sent successfully", newUser);
@@ -441,24 +441,15 @@ public class AuthenticationService {
         return candidate;
     }
 
-    private boolean isNewUser(String normalizedPhone, AppId appId) {
+    /**
+     * Checks if the user is new for the provided appId by delegating to the configured profile type.
+     */
+    public boolean isNewUserByAppId(String normalizedPhone, AppId appId) {
         ProfileType profileType = loginProfileProperties.resolve(appId);
         return switch (profileType) {
             case DRIVER -> driverProfileRepository.findByPhone(normalizedPhone).isEmpty();
             case USER -> userProfileRepository.findByPhone(normalizedPhone).isEmpty();
         };
-    }
-
-    /**
-     * Checks if the user is new for driver registration.
-     * Only checks the driver table, even if the phone number exists in the user table.
-     */
-    public boolean isNewDriverUser(String normalizedPhone, AppId appId) {
-        ProfileType profileType = loginProfileProperties.resolve(appId);
-        if (profileType == ProfileType.DRIVER) {
-            return driverProfileRepository.findByPhone(normalizedPhone).isEmpty();
-        }
-        throw new IllegalArgumentException("This method is only for driver appIds");
     }
 
     private OtpFailureTracking.RoleType resolveRoleType(AppId appId) {

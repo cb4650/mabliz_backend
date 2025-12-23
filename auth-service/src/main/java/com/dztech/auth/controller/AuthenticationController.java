@@ -53,8 +53,11 @@ public class AuthenticationController {
     public ResponseEntity<NewUserCheckResponse> checkNewUser(
             @RequestHeader("appId") String appIdHeader, @RequestBody @Valid OtpRequest request) {
         AppId appId = AppId.fromHeader(appIdHeader);
+        if (appId == AppId.ALL) {
+            throw new IllegalArgumentException("appId header must be rydd or rydc");
+        }
         String normalizedPhone = authenticationService.normalizePhoneForCheck(request.phone());
-        boolean isNewUser = authenticationService.isNewDriverUser(normalizedPhone, appId);
+        boolean isNewUser = authenticationService.isNewUserByAppId(normalizedPhone, appId);
         NewUserCheckResponse response = new NewUserCheckResponse(true, "User check completed", isNewUser);
         return ResponseEntity.ok(response);
     }
