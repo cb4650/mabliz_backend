@@ -30,10 +30,10 @@ public class DriverAvailability {
     @Column(name = "available", nullable = false)
     private boolean available;
 
-    @Column(name = "latitude", nullable = false, precision = 10, scale = 6)
+    @Column(name = "latitude", precision = 10, scale = 6)
     private BigDecimal latitude;
 
-    @Column(name = "longitude", nullable = false, precision = 10, scale = 6)
+    @Column(name = "longitude", precision = 10, scale = 6)
     private BigDecimal longitude;
 
     @Column(name = "updated_at", nullable = false)
