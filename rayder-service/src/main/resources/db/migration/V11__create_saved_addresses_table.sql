@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS saved_addresses (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    label VARCHAR(100) NOT NULL,
+    receiver_phone_number VARCHAR(25) NOT NULL,
+    latitude DECIMAL(10,6) NOT NULL,
+    longitude DECIMAL(10,6) NOT NULL,
+    address JSON NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uk_saved_addresses_user_label UNIQUE (user_id, label)
+);
