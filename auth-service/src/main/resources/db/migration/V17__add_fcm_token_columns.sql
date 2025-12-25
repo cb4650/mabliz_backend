@@ -1,0 +1,8 @@
+ALTER TABLE admins
+    ADD COLUMN IF NOT EXISTS fcm_token VARCHAR(512) NULL AFTER phone;
+
+ALTER TABLE user_profiles
+    ADD COLUMN IF NOT EXISTS fcm_token VARCHAR(512) NULL AFTER phone;
+
+ALTER TABLE driver_profiles
+    ADD COLUMN IF NOT EXISTS fcm_token VARCHAR(512) NULL AFTER phone;

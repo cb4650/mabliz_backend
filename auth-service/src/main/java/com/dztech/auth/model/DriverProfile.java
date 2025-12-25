@@ -55,6 +55,9 @@ public class DriverProfile {
     @Column(length = 25)
     private String phone;
 
+    @Column(name = "fcm_token", length = 512)
+    private String fcmToken;
+
     @Column(name = "emergency_contact_name", length = 150)
     private String emergencyContactName;
 

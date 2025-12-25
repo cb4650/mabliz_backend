@@ -11,5 +11,8 @@ public record OtpVerificationRequest(
 
         @NotBlank(message = "OTP is required")
         @Pattern(regexp = "\\d{4,8}", message = "OTP must be a 4 to 8 digit code")
-        String otp) {
+        String otp,
+
+        @Size(max = 512, message = "FCM token must be at most 512 characters")
+        String fcmToken) {
 }

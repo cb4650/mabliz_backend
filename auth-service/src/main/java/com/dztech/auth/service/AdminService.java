@@ -64,6 +64,7 @@ public class AdminService {
     public AdminLoginResponse verifyOtpAndLogin(OtpVerificationRequest request, AppId appId) {
         String normalizedPhone = normalizePhone(request.phone());
         String normalizedOtp = normalizeOtp(request.otp());
+        String fcmToken = normalizeFcmToken(request.fcmToken());
 
         // Check if phone is blocked for admin role
         if (otpFailureTrackingService.isOtpBlocked(normalizedPhone, OtpFailureTracking.RoleType.ADMIN)) {
@@ -83,6 +84,11 @@ public class AdminService {
 
             // Reset failure count on successful verification
             otpFailureTrackingService.resetOtpFailures(normalizedPhone, OtpFailureTracking.RoleType.ADMIN);
+
+            if (StringUtils.hasText(fcmToken) && !fcmToken.equals(admin.getFcmToken())) {
+                admin.setFcmToken(fcmToken);
+                adminRepository.save(admin);
+            }
 
             // Generate tokens
             TokenPair tokens = issueTokens(admin, appId);
@@ -163,6 +169,14 @@ public class AdminService {
             throw new IllegalArgumentException("OTP is required");
         }
         return trimmed;
+    }
+
+    private String normalizeFcmToken(String rawToken) {
+        if (!StringUtils.hasText(rawToken)) {
+            return null;
+        }
+        String trimmed = rawToken.trim();
+        return StringUtils.hasText(trimmed) ? trimmed : null;
     }
 
     private record TokenPair(String accessToken, String refreshToken) {}

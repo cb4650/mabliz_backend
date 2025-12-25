@@ -38,6 +38,9 @@ public class UserProfile {
     @Column(nullable = false, length = 150)
     private String email;
 
+    @Column(name = "fcm_token", length = 512)
+    private String fcmToken;
+
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
 

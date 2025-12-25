@@ -86,6 +86,7 @@ public class AuthenticationService {
     public LoginResponse verifyOtp(OtpVerificationRequest request, AppId appId) {
         String normalizedPhone = normalizePhone(request.phone());
         String normalizedOtp = normalizeOtp(request.otp());
+        String fcmToken = normalizeFcmToken(request.fcmToken());
         OtpFailureTracking.RoleType roleType = resolveRoleType(appId);
 
         // Check if phone is blocked for this role
@@ -102,7 +103,7 @@ public class AuthenticationService {
             // Reset failure count on successful verification
             otpFailureTrackingService.resetOtpFailures(normalizedPhone, roleType);
 
-            ProfileResult profileResult = handleProfileForLogin(appId, normalizedPhone, request.phone());
+            ProfileResult profileResult = handleProfileForLogin(appId, normalizedPhone, request.phone(), fcmToken);
             TokenPair tokens = issueTokens(profileResult.user(), profileResult.profileData(), appId);
 
             return new LoginResponse(
@@ -160,15 +161,16 @@ public class AuthenticationService {
         return AppId.ALL;
     }
 
-    private ProfileResult handleProfileForLogin(AppId appId, String normalizedPhone, String rawPhone) {
+    private ProfileResult handleProfileForLogin(
+            AppId appId, String normalizedPhone, String rawPhone, String fcmToken) {
         ProfileType profileType = loginProfileProperties.resolve(appId);
         return switch (profileType) {
-            case DRIVER -> handleDriverProfileLogin(normalizedPhone, rawPhone);
-            case USER -> handleUserProfileLogin(normalizedPhone, rawPhone);
+            case DRIVER -> handleDriverProfileLogin(normalizedPhone, rawPhone, fcmToken);
+            case USER -> handleUserProfileLogin(normalizedPhone, rawPhone, fcmToken);
         };
     }
 
-    private ProfileResult handleUserProfileLogin(String normalizedPhone, String rawPhone) {
+    private ProfileResult handleUserProfileLogin(String normalizedPhone, String rawPhone, String fcmToken) {
         boolean newUser = false;
         UserProfile profile = userProfileRepository.findByPhone(normalizedPhone).orElse(null);
         if (profile == null) {
@@ -187,6 +189,10 @@ public class AuthenticationService {
                 profile.setPhone(normalizedPhone);
                 profileUpdated = true;
             }
+            if (StringUtils.hasText(fcmToken) && !fcmToken.equals(profile.getFcmToken())) {
+                profile.setFcmToken(fcmToken);
+                profileUpdated = true;
+            }
             if (!StringUtils.hasText(profile.getEmail())) {
                 profile.setEmail(user.getEmail());
                 profileUpdated = true;
@@ -200,7 +206,7 @@ public class AuthenticationService {
             }
         } else {
             user = createUserForPhone(normalizedPhone);
-            profile = createProfileForUser(user, normalizedPhone);
+            profile = createProfileForUser(user, normalizedPhone, fcmToken);
             newUser = true;
         }
 
@@ -213,7 +219,7 @@ public class AuthenticationService {
         return new ProfileResult(user, profileData, newUser);
     }
 
-    private ProfileResult handleDriverProfileLogin(String normalizedPhone, String rawPhone) {
+    private ProfileResult handleDriverProfileLogin(String normalizedPhone, String rawPhone, String fcmToken) {
         boolean newUser = false;
         DriverProfile profile = driverProfileRepository.findByPhone(normalizedPhone).orElse(null);
         if (profile == null) {
@@ -232,6 +238,10 @@ public class AuthenticationService {
                 profile.setPhone(normalizedPhone);
                 profileUpdated = true;
             }
+            if (StringUtils.hasText(fcmToken) && !fcmToken.equals(profile.getFcmToken())) {
+                profile.setFcmToken(fcmToken);
+                profileUpdated = true;
+            }
             if (!StringUtils.hasText(profile.getFullName())) {
                 profile.setFullName(defaultNameFromPhone(normalizedPhone));
                 profileUpdated = true;
@@ -245,7 +255,7 @@ public class AuthenticationService {
             }
         } else {
             user = createUserForPhone(normalizedPhone);
-            profile = createDriverProfileForUser(user, normalizedPhone);
+            profile = createDriverProfileForUser(user, normalizedPhone, fcmToken);
             newUser = true;
         }
 
@@ -351,6 +361,14 @@ public class AuthenticationService {
         return trimmed;
     }
 
+    private String normalizeFcmToken(String rawToken) {
+        if (!StringUtils.hasText(rawToken)) {
+            return null;
+        }
+        String trimmed = rawToken.trim();
+        return StringUtils.hasText(trimmed) ? trimmed : null;
+    }
+
     private User createUserForPhone(String phone) {
         String baseIdentifier = sanitizeForIdentifier(phone);
         String username = generateUniqueUsername("ryd_" + baseIdentifier);
@@ -366,23 +384,25 @@ public class AuthenticationService {
         return userRepository.save(user);
     }
 
-    private UserProfile createProfileForUser(User user, String phone) {
+    private UserProfile createProfileForUser(User user, String phone, String fcmToken) {
         UserProfile profile = UserProfile.builder()
                 .userId(user.getId())
                 .name(defaultNameFromPhone(phone))
                 .phone(phone)
                 .email(user.getEmail())
+                .fcmToken(fcmToken)
                 .emailVerified(false)
                 .build();
         return userProfileRepository.save(profile);
     }
 
-    private DriverProfile createDriverProfileForUser(User user, String phone) {
+    private DriverProfile createDriverProfileForUser(User user, String phone, String fcmToken) {
         DriverProfile profile = DriverProfile.builder()
                 .userId(user.getId())
                 .fullName(defaultNameFromPhone(phone))
                 .phone(phone)
                 .email(user.getEmail())
+                .fcmToken(fcmToken)
                 .status(DriverProfileStatus.PENDING)
                 .build();
         return driverProfileRepository.save(profile);

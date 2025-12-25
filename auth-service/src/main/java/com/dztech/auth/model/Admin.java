@@ -34,6 +34,9 @@ public class Admin {
     @Column(nullable = false, unique = true, length = 25)
     private String phone;
 
+    @Column(name = "fcm_token", length = 512)
+    private String fcmToken;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
