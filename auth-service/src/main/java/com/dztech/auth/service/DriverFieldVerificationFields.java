@@ -14,6 +14,7 @@ public final class DriverFieldVerificationFields {
             "CURRENT_ADDRESS",
             "MOTHER_TONGUE",
             "RELATIONSHIP",
+            "HILL_STATION",
             "LANGUAGES",
             "LICENSE_NUMBER",
             "LICENSE_TYPE",

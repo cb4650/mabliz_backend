@@ -117,6 +117,9 @@ public class DriverProfileService {
         if (StringUtils.hasText(form.getRelationship())) {
             profile.setRelationship(form.getRelationship().trim());
         }
+        if (form.getHillStation() != null) {
+            profile.setHillStation(form.getHillStation());
+        }
         if (form.getLanguages() != null && !form.getLanguages().isEmpty()) {
             profile.setLanguages(form.getLanguages());
         }
@@ -233,6 +236,7 @@ public class DriverProfileService {
                 profile.getCurrentAddress(),
                 profile.getMotherTongue(),
                 profile.getRelationship(),
+                profile.isHillStation(),
                 profile.getLanguages(),
                 profile.getLicenseNumber(),
                 profile.getLicenseType(),

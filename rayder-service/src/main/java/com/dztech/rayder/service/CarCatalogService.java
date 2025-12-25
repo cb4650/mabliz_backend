@@ -52,7 +52,12 @@ public class CarCatalogService {
     }
 
     private CarBrandResponse toBrandResponse(CarBrand brand) {
-        return new CarBrandResponse(brand.getId(), brand.getName(), brand.getCountry(), brand.getCategory());
+        return new CarBrandResponse(
+                brand.getId(),
+                brand.getName(),
+                brand.getCountry(),
+                brand.getCategory(),
+                brand.getBrandImageUrl());
     }
 
     private CarModelResponse toModelResponse(CarModel model) {

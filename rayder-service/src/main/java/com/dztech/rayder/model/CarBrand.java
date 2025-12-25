@@ -26,4 +26,7 @@ public class CarBrand {
 
     @Column(nullable = false, length = 50)
     private String category;
+
+    @Column(name = "brand_image_url", nullable = false, length = 255)
+    private String brandImageUrl;
 }

@@ -208,6 +208,7 @@ public class AdminDriverManagementService {
                 profile.getCurrentAddress(),
                 profile.getMotherTongue(),
                 profile.getRelationship(),
+                profile.isHillStation(),
                 profile.getLanguages(),
                 profile.getLicenseNumber(),
                 profile.getLicenseType(),

@@ -124,6 +124,9 @@ public class DriverProfile {
     @Column(name = "father_name", length = 150)
     private String fatherName;
 
+    @Column(name = "hill_station", nullable = false)
+    private boolean hillStation;
+
     @Lob
     @Column(name = "profile_photo", columnDefinition = "LONGBLOB")
     private byte[] profilePhoto;

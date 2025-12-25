@@ -85,6 +85,7 @@ class DriverProfileServiceTest {
                 .userId(10L)
                 .fullName("John Doe")
                 .email("john@example.com")
+                .hillStation(true)
                 .status(DriverProfileStatus.PENDING)
                 .build();
         when(driverProfileRepository.findById(10L)).thenReturn(Optional.of(profile));
@@ -102,6 +103,7 @@ class DriverProfileServiceTest {
         assertThat(view.fullName()).isEqualTo("John Doe");
         assertThat(view.email()).isEqualTo("john@example.com");
         assertThat(view.emailVerified()).isTrue();
+        assertThat(view.hillStation()).isTrue();
     }
 
     @Test
@@ -136,6 +138,7 @@ class DriverProfileServiceTest {
         form.setPhone("9876543210");
         form.setLanguages(List.of("English", "Tamil"));
         form.setExperience("5");
+        form.setHillStation(true);
         form.setProfilePhoto(new MockMultipartFile("profilePhoto", "photo.jpg", "image/jpeg", new byte[] {1, 2}));
 
         DriverProfileView view = driverProfileService.updateProfile(10L, form);
@@ -148,6 +151,7 @@ class DriverProfileServiceTest {
         assertThat(profile.getProfilePhoto()).isNull();
         assertThat(profile.getDob()).isEqualTo("1990-05-20");
         assertThat(profile.getExperience()).isEqualTo("5");
+        assertThat(profile.isHillStation()).isTrue();
         assertThat(view.profilePhoto().url())
                 .isEqualTo("/api/driver/profile/documents/10/profilePhoto?token=doc-token");
         assertThat(view.profilePhoto().contentType()).isEqualTo("image/jpeg");

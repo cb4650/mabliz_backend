@@ -19,6 +19,7 @@ public record DriverProfileView(
         String currentAddress,
         String motherTongue,
         String relationship,
+        boolean hillStation,
         List<String> languages,
         String licenseNumber,
         List<String> licenseType,

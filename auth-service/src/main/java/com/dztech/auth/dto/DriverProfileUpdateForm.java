@@ -40,6 +40,8 @@ public class DriverProfileUpdateForm {
     @Size(max = 50, message = "Relationship must be at most 50 characters")
     private String relationship;
 
+    private Boolean hillStation;
+
     private List<String> languages;
 
     @Size(max = 50, message = "License number must be at most 50 characters")
@@ -170,6 +172,14 @@ public class DriverProfileUpdateForm {
 
     public void setRelationship(String relationship) {
         this.relationship = relationship;
+    }
+
+    public Boolean getHillStation() {
+        return hillStation;
+    }
+
+    public void setHillStation(Boolean hillStation) {
+        this.hillStation = hillStation;
     }
 
     public List<String> getLanguages() {
