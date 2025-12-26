@@ -1,5 +1,6 @@
 package com.dztech.rayder.service;
 
+import com.dztech.rayder.dto.CarBrandCategoryResponse;
 import com.dztech.rayder.dto.CarBrandResponse;
 import com.dztech.rayder.dto.CarModelResponse;
 import com.dztech.rayder.exception.ResourceNotFoundException;
@@ -7,7 +8,10 @@ import com.dztech.rayder.model.CarBrand;
 import com.dztech.rayder.model.CarModel;
 import com.dztech.rayder.repository.CarBrandRepository;
 import com.dztech.rayder.repository.CarModelRepository;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +28,18 @@ public class CarCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public List<CarBrandResponse> getAllBrands() {
-        return carBrandRepository.findAllByOrderByIdAsc().stream()
-                .map(this::toBrandResponse)
+    public List<CarBrandCategoryResponse> getAllBrands() {
+        List<CarBrand> brands = carBrandRepository.findAllByOrderByIdAsc();
+        Map<String, List<CarBrandResponse>> groupedBrands = new LinkedHashMap<>();
+
+        for (CarBrand brand : brands) {
+            groupedBrands
+                    .computeIfAbsent(brand.getCategory(), ignored -> new ArrayList<>())
+                    .add(toBrandResponse(brand));
+        }
+
+        return groupedBrands.entrySet().stream()
+                .map(entry -> new CarBrandCategoryResponse(entry.getKey(), entry.getValue()))
                 .toList();
     }
 
@@ -53,11 +66,7 @@ public class CarCatalogService {
 
     private CarBrandResponse toBrandResponse(CarBrand brand) {
         return new CarBrandResponse(
-                brand.getId(),
-                brand.getName(),
-                brand.getCountry(),
-                brand.getCategory(),
-                brand.getBrandImageUrl());
+                brand.getId(), brand.getName(), brand.getCountry(), brand.getBrandImageUrl());
     }
 
     private CarModelResponse toModelResponse(CarModel model) {

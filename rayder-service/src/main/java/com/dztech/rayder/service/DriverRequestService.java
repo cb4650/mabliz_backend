@@ -1,8 +1,10 @@
 package com.dztech.rayder.service;
 
+import com.dztech.rayder.client.InternalNotificationClient;
 import com.dztech.rayder.dto.CreateDriverRequest;
 import com.dztech.rayder.dto.DriverLocationResponse;
 import com.dztech.rayder.dto.DriverRequestDetails;
+import com.dztech.rayder.dto.TripConfirmedNotificationRequest;
 import com.dztech.rayder.exception.ResourceNotFoundException;
 import com.dztech.rayder.model.DriverRequest;
 import com.dztech.rayder.model.Vehicle;
@@ -22,12 +24,15 @@ public class DriverRequestService {
 
     private final DriverRequestRepository driverRequestRepository;
     private final VehicleRepository vehicleRepository;
+    private final InternalNotificationClient internalNotificationClient;
 
     public DriverRequestService(
             DriverRequestRepository driverRequestRepository,
-            VehicleRepository vehicleRepository) {
+            VehicleRepository vehicleRepository,
+            InternalNotificationClient internalNotificationClient) {
         this.driverRequestRepository = driverRequestRepository;
         this.vehicleRepository = vehicleRepository;
+        this.internalNotificationClient = internalNotificationClient;
     }
 
     @Transactional
@@ -72,6 +77,7 @@ public class DriverRequestService {
 
         request.setStatus(STATUS_CONFIRMED);
         DriverRequest saved = driverRequestRepository.save(request);
+        notifyDrivers(saved);
         return toDetails(saved);
     }
 
@@ -128,5 +134,15 @@ public class DriverRequestService {
             BigDecimal extraHourCharges,
             BigDecimal festivalCharges,
             BigDecimal estimate) {
+    }
+
+    private void notifyDrivers(DriverRequest request) {
+        TripConfirmedNotificationRequest payload = new TripConfirmedNotificationRequest(
+                request.getId(),
+                request.getPickupAddress(),
+                request.getDropAddress(),
+                request.getStartTime(),
+                request.getEndTime());
+        internalNotificationClient.sendTripConfirmed(payload);
     }
 }
