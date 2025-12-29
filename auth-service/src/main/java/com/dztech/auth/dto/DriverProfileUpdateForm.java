@@ -49,6 +49,8 @@ public class DriverProfileUpdateForm {
 
     private List<String> licenseType;
 
+    private List<Long> preferredBrands;
+
     @Size(max = 50, message = "Batch must be at most 50 characters")
     private String batch;
 
@@ -204,6 +206,14 @@ public class DriverProfileUpdateForm {
 
     public void setLicenseType(List<String> licenseType) {
         this.licenseType = licenseType;
+    }
+
+    public List<Long> getPreferredBrands() {
+        return preferredBrands;
+    }
+
+    public void setPreferredBrands(List<Long> preferredBrands) {
+        this.preferredBrands = preferredBrands;
     }
 
     public String getBatch() {

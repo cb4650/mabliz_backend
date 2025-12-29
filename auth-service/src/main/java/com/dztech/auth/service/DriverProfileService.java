@@ -129,6 +129,9 @@ public class DriverProfileService {
         if (form.getLicenseType() != null && !form.getLicenseType().isEmpty()) {
             profile.setLicenseType(form.getLicenseType());
         }
+        if (form.getPreferredBrands() != null && !form.getPreferredBrands().isEmpty()) {
+            profile.setPreferredBrands(form.getPreferredBrands());
+        }
         if (StringUtils.hasText(form.getBatch())) {
             profile.setBatch(form.getBatch().trim());
         }
@@ -240,6 +243,7 @@ public class DriverProfileService {
                 profile.getLanguages(),
                 profile.getLicenseNumber(),
                 profile.getLicenseType(),
+                profile.getPreferredBrands(),
                 profile.getBatch(),
                 profile.getExpiryDate(),
                 profile.getTransmission(),

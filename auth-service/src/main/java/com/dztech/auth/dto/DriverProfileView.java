@@ -23,6 +23,7 @@ public record DriverProfileView(
         List<String> languages,
         String licenseNumber,
         List<String> licenseType,
+        List<Long> preferredBrands,
         String batch,
         String expiryDate,
         List<String> transmission,

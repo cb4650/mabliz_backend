@@ -16,6 +16,7 @@ public record DriverProfileDetailView(
         String motherTongue,
         String relationship,
         boolean hillStation,
+        List<Long> preferredBrands,
         List<String> languages,
         String licenseNumber,
         List<String> licenseType,

@@ -13,6 +13,8 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -79,6 +81,11 @@ public class DriverProfile {
     @CollectionTable(name = "driver_license_types", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "license_type")
     private List<String> licenseType;
+
+    @ElementCollection
+    @CollectionTable(name = "driver_preferred_brands", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "brand_id")
+    private List<Long> preferredBrands;
 
     @Column(name = "experience")
     private String experience;
