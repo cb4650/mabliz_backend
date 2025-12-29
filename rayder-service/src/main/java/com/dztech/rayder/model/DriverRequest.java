@@ -77,6 +77,12 @@ public class DriverRequest {
     @Column(name = "status", nullable = false, length = 20)
     private String status;
 
+    @Column(name = "accepted_driver_id")
+    private Long acceptedDriverId;
+
+    @Column(name = "accepted_at")
+    private Instant acceptedAt;
+
     @Column(name = "estimate", nullable = false, precision = 12, scale = 2)
     private BigDecimal estimate;
 
