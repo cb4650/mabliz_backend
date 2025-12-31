@@ -1,6 +1,7 @@
 package com.dztech.rayder.service;
 
 import com.dztech.rayder.dto.DriverTripActionResponse;
+import com.dztech.rayder.dto.DriverTripDepartureResponse;
 import com.dztech.rayder.dto.DriverTripDetailResponse;
 import com.dztech.rayder.exception.ResourceNotFoundException;
 import com.dztech.rayder.model.DriverRequest;
@@ -12,6 +13,7 @@ import com.dztech.rayder.repository.DriverTripResponseRepository;
 import com.dztech.rayder.repository.UserProfileRepository;
 import java.util.Optional;
 import java.time.Instant;
+import java.math.BigDecimal;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -89,6 +91,28 @@ public class DriverTripResponseService {
 
         DriverTripResponse saved = driverTripResponseRepository.save(response);
         return toActionResponse(saved, request.getAcceptedDriverId(), "Trip denied");
+    }
+
+    @Transactional
+    public DriverTripDepartureResponse markDeparted(Long driverId, Long bookingId, BigDecimal latitude, BigDecimal longitude) {
+        DriverRequest request = driverRequestRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (request.getAcceptedDriverId() == null || !request.getAcceptedDriverId().equals(driverId)) {
+            throw new IllegalArgumentException("Trip is not assigned to this driver");
+        }
+
+        Instant now = Instant.now();
+        request.setDepartedAt(now);
+        request.setDepartedLatitude(latitude);
+        request.setDepartedLongitude(longitude);
+        request.setStatus("DEPARTED");
+        driverRequestRepository.save(request);
+
+        DriverTripDepartureResponse.Data data = new DriverTripDepartureResponse.Data(
+                bookingId, driverId, now, latitude, longitude);
+        return new DriverTripDepartureResponse(true, "Driver marked as departed", data);
     }
 
     @Transactional(readOnly = true)

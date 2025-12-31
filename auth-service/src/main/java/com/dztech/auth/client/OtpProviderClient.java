@@ -21,21 +21,30 @@ public class OtpProviderClient {
     private final RestTemplate restTemplate;
     private final String baseUrl;
     private final String apiKey;
-    private final String smsTemplate;
+    private final String templateBasePath;
+    private final String customerSmsTemplate;
+    private final String driverSmsTemplate;
     Gson gson = new Gson();
 
     public OtpProviderClient(
             RestTemplateBuilder restTemplateBuilder,
             @Value("${otp.provider.base-url}") String baseUrl,
             @Value("${otp.provider.api-key}") String apiKey,
-            @Value("${otp.provider.sms-template:AUTOGEN2}") String smsTemplate) {
+            @Value("${otp.provider.sms-template.base-path:AUTOGEN2}") String templateBasePath,
+            @Value("${otp.provider.customer.sms-template:OTP_Customer}") String customerSmsTemplate,
+            @Value("${otp.provider.driver.sms-template:OTP_partner}") String driverSmsTemplate) {
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofSeconds(5))
                 .setReadTimeout(Duration.ofSeconds(10))
                 .build();
         this.baseUrl = requireNonBlank(baseUrl, "otp.provider.base-url must be configured");
         this.apiKey = requireNonBlank(apiKey, "otp.provider.api-key must be configured");
-        this.smsTemplate = requireNonBlank(smsTemplate, "otp.provider.sms-template must be configured");
+        this.templateBasePath = requireNonBlank(
+                templateBasePath, "otp.provider.sms-template.base-path must be configured");
+        this.customerSmsTemplate = requireNonBlank(
+                customerSmsTemplate, "otp.provider.customer.sms-template must be configured");
+        this.driverSmsTemplate = requireNonBlank(
+                driverSmsTemplate, "otp.provider.driver.sms-template must be configured");
     }
 
     public String sendOtp(String phone, AppId appId) {
@@ -44,6 +53,7 @@ public class OtpProviderClient {
                 .pathSegment(apiKey)
                 .pathSegment("SMS")
                 .pathSegment(normalizedPhone)
+                .pathSegment(templateBasePath)
                 .pathSegment(resolveTemplate(appId))
                 .build()
                 .encode()
@@ -92,10 +102,11 @@ public class OtpProviderClient {
 
     private String resolveTemplate(AppId appId) {
         if (appId == null) {
-            return smsTemplate;
+            return customerSmsTemplate;
         }
         return switch (appId) {
-            case ALL, RYDC, RYDD -> smsTemplate;
+            case ALL, RYDC -> customerSmsTemplate;
+            case RYDD -> driverSmsTemplate;
         };
     }
 

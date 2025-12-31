@@ -83,6 +83,15 @@ public class DriverRequest {
     @Column(name = "accepted_at")
     private Instant acceptedAt;
 
+    @Column(name = "departed_at")
+    private Instant departedAt;
+
+    @Column(name = "departed_latitude", precision = 10, scale = 6)
+    private BigDecimal departedLatitude;
+
+    @Column(name = "departed_longitude", precision = 10, scale = 6)
+    private BigDecimal departedLongitude;
+
     @Column(name = "estimate", nullable = false, precision = 12, scale = 2)
     private BigDecimal estimate;
 
