@@ -16,3 +16,4 @@
 
 # Firebase credentials - do not commit this file
 auth-service/src/main/resources/firebase-credentials.json
+auth-service/src/main/resources/firebase-credential.json
