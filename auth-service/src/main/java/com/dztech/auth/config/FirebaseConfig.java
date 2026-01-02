@@ -7,9 +7,9 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +17,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.StringUtils;
 
 @Configuration
@@ -62,13 +63,29 @@ public class FirebaseConfig {
         }
 
         if (StringUtils.hasText(credentialsFile)) {
-            Path credentialsPath = Path.of(credentialsFile.trim());
-            try (InputStream inputStream = Files.newInputStream(credentialsPath)) {
+            try (InputStream inputStream = getCredentialsInputStream(credentialsFile.trim())) {
                 return GoogleCredentials.fromStream(inputStream);
             }
         }
 
         throw new IllegalStateException(
                 "Firebase credentials are required. Supply firebase.credentials.json or firebase.credentials.file");
+    }
+
+    private InputStream getCredentialsInputStream(String credentialsFile) throws IOException {
+        if (credentialsFile.startsWith("classpath:")) {
+            String resourcePath = credentialsFile.substring("classpath:".length());
+            if (resourcePath.startsWith("/")) {
+                resourcePath = resourcePath.substring(1);
+            }
+
+            ClassPathResource resource = new ClassPathResource(resourcePath);
+            if (!resource.exists()) {
+                throw new IllegalStateException("Firebase credentials file not found on classpath: " + resourcePath);
+            }
+            return resource.getInputStream();
+        }
+
+        return Files.newInputStream(Path.of(credentialsFile));
     }
 }
