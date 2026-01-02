@@ -14,5 +14,5 @@
 # OS
 .DS_Store
 
-# Firebase credentials
+# Firebase credentials - do not commit this file
 auth-service/src/main/resources/firebase-credentials.json
