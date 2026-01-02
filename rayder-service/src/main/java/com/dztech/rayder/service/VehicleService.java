@@ -42,8 +42,8 @@ public class VehicleService {
                 .ownershipType(request.ownershipType())
                 .transmission(request.transmission())
                 .fuelType(request.fuelType())
-                .year(request.year().trim())
-                .policyNo(request.policyNo().trim())
+                .year(request.year() != null ? request.year().trim() : null)
+                .policyNo(request.policyNo() != null ? request.policyNo().trim() : null)
                 .startDate(request.startDate())
                 .expiryDate(request.expiryDate())
                 .build();

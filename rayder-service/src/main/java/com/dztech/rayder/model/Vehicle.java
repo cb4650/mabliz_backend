@@ -56,18 +56,18 @@ public class Vehicle {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "fuel_type", nullable = false, length = 20)
+    @Column(name = "fuel_type", nullable = true, length = 20)
     private VehicleFuelType fuelType;
 
-    @Column(nullable = false, length = 4)
+    @Column(nullable = true, length = 4)
     private String year;
 
-    @Column(name = "policy_no", nullable = false, length = 100)
+    @Column(name = "policy_no", nullable = true, length = 100)
     private String policyNo;
 
-    @Column(name = "start_date", nullable = false)
+    @Column(name = "start_date", nullable = true)
     private LocalDate startDate;
 
-    @Column(name = "expiry_date", nullable = false)
+    @Column(name = "expiry_date", nullable = true)
     private LocalDate expiryDate;
 }
