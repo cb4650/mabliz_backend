@@ -1,0 +1,105 @@
+services:
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-05-10T01-41-38Z
+    container_name: dztech-minio-prod
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data_prod:/data
+    expose:
+      - "9000"
+      - "9001"
+    ports:
+      - "9100:9000"
+      - "9101:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+    networks:
+      - dztech-prod-net
+
+  mysql:
+    image: mysql:8.0
+    container_name: dztech-mysql-prod
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - mysql_data_prod:/var/lib/mysql
+    expose:
+      - "3306"
+    networks:
+      - dztech-prod-net
+
+  auth-service:
+    build:
+      context: ./auth-service
+    container_name: dztech-auth-service-prod
+    depends_on:
+      - mysql
+      - minio
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/auth_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: secret
+      SERVER_PORT: 8081
+      RAYDER_SERVICE_BASE_URL: http://rayder-service:8082
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-prod-please-update-1234567890}
+      JWT_ISSUER: ${JWT_ISSUER:-dztech-auth-service}
+      JWT_ACCESS_EXPIRATION_MINUTES: ${JWT_ACCESS_EXPIRATION_MINUTES:-1440}
+      JWT_REFRESH_EXPIRATION_MINUTES: ${JWT_REFRESH_EXPIRATION_MINUTES:-43200}
+      APP_PUBLIC_API_PREFIX: ${APP_PUBLIC_API_PREFIX:-/auth}
+      DOCUMENT_STORAGE_ENDPOINT: http://minio:9000
+      DOCUMENT_STORAGE_ACCESS_KEY: ${DOCUMENT_STORAGE_ACCESS_KEY:-minioadmin}
+      DOCUMENT_STORAGE_SECRET_KEY: ${DOCUMENT_STORAGE_SECRET_KEY:-minioadmin}
+      DOCUMENT_STORAGE_BUCKET: ${DOCUMENT_STORAGE_BUCKET:-dztech-documents}
+      DOCUMENT_STORAGE_REGION: ${DOCUMENT_STORAGE_REGION:-}
+    ports:
+      - "5202:8081"
+    networks:
+      - dztech-prod-net
+
+  rayder-service:
+    build:
+      context: ./rayder-service
+    container_name: dztech-rayder-service-prod
+    depends_on:
+      - mysql
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/rayder_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: secret
+      SERVER_PORT: 8082
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-prod-please-update-1234567890}
+      JWT_ISSUER: ${JWT_ISSUER:-dztech-auth-service}
+    ports:
+      - "5203:8082"
+    networks:
+      - dztech-prod-net
+
+  nginx:
+    image: nginx:1.25
+    container_name: dztech-gateway-prod
+    depends_on:
+      - auth-service
+      - rayder-service
+    ports:
+      - "5200:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    restart: unless-stopped
+    networks:
+      - dztech-prod-net
+
+volumes:
+  mysql_data_prod:
+  minio_data_prod:
+
+networks:
+  dztech-prod-net:
+    driver: bridge
