@@ -70,4 +70,16 @@ public class Vehicle {
 
     @Column(name = "expiry_date", nullable = true)
     private LocalDate expiryDate;
+
+    @Column(name = "vehicle_no", nullable = true, length = 20)
+    private String vehicleNo;
+
+    @Column(name = "insurance_no", nullable = true, length = 100)
+    private String insuranceNo;
+
+    @Column(name = "insurance_expiry", nullable = true)
+    private LocalDate insuranceExpiry;
+
+    @Column(name = "insurance_photo", nullable = true, length = 255)
+    private String insurancePhoto;
 }

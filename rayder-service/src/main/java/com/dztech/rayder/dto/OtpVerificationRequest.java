@@ -1,6 +1,5 @@
 package com.dztech.rayder.dto;
 
-import com.dztech.rayder.model.VehicleFuelType;
 import java.time.LocalDate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,10 +11,9 @@ public record OtpVerificationRequest(
         MultipartFile carImage5,
         MultipartFile carImage6,
         MultipartFile selfieImage,
-        VehicleFuelType fuelType,
-        String year,
-        String policyNo,
-        LocalDate startDate,
-        LocalDate expiryDate,
+        String vehicleNo,
+        String insuranceNo,
+        LocalDate insuranceExpiry,
+        MultipartFile insurancePhoto,
         String otp) {
 }

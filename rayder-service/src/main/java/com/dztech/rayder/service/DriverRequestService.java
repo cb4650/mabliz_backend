@@ -183,8 +183,8 @@ public class DriverRequestService {
         VehicleCompletionResponse vehicleCompletion = checkVehicleCompletion(userId, bookingId);
         if (!vehicleCompletion.isVehicleCompleted()) {
             // Vehicle details are mandatory when vehicle is not completed
-            if (request.fuelType() == null || request.year() == null || request.policyNo() == null
-                    || request.startDate() == null || request.expiryDate() == null) {
+            if (request.vehicleNo() == null || request.vehicleNo().trim().isEmpty()
+                    || request.insuranceExpiry() == null || request.insurancePhoto() == null) {
                 return new OtpVerificationResponse(false, "Vehicle details are required since vehicle is not completed");
             }
         }
@@ -204,14 +204,16 @@ public class DriverRequestService {
         log.info("OTP verified successfully for bookingId: {}, trip marked as STARTED", bookingId);
 
         // Update vehicle details if provided
-        if (request.fuelType() != null || request.year() != null || request.policyNo() != null
-                || request.startDate() != null || request.expiryDate() != null) {
+        if (request.vehicleNo() != null || request.insuranceNo() != null
+                || request.insuranceExpiry() != null || request.insurancePhoto() != null) {
             Vehicle vehicle = driverRequest.getVehicle();
-            if (request.fuelType() != null) vehicle.setFuelType(request.fuelType());
-            if (request.year() != null) vehicle.setYear(request.year());
-            if (request.policyNo() != null) vehicle.setPolicyNo(request.policyNo());
-            if (request.startDate() != null) vehicle.setStartDate(request.startDate());
-            if (request.expiryDate() != null) vehicle.setExpiryDate(request.expiryDate());
+            if (request.vehicleNo() != null) vehicle.setVehicleNo(request.vehicleNo());
+            if (request.insuranceNo() != null) vehicle.setInsuranceNo(request.insuranceNo());
+            if (request.insuranceExpiry() != null) vehicle.setInsuranceExpiry(request.insuranceExpiry());
+            // TODO: Handle insurance photo upload and set the path
+            if (request.insurancePhoto() != null) {
+                // vehicle.setInsurancePhoto(saveInsurancePhoto(request.insurancePhoto()));
+            }
             vehicleRepository.save(vehicle);
             log.info("Updated vehicle details for vehicleId: {}", vehicle.getId());
         }
