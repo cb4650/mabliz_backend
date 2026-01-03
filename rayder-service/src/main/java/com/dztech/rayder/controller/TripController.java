@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/driver/trips")
+@RequestMapping("/api/trips")
 public class TripController {
 
     private final DriverRequestService driverRequestService;
