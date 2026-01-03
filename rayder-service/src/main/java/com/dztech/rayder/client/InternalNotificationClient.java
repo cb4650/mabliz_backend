@@ -26,7 +26,7 @@ public class InternalNotificationClient {
 
     public InternalNotificationClient(
             RestTemplateBuilder restTemplateBuilder,
-            @Value("${auth.service.base-url:http://localhost:8081}") String authServiceBaseUrl,
+            @Value("${auth.service.base-url:http://dztech-auth-service:8081}") String authServiceBaseUrl,
             @Value("${internal.api.key:}") String internalApiKey) {
         this.restTemplate = restTemplateBuilder.build();
         this.authServiceBaseUrl = authServiceBaseUrl;

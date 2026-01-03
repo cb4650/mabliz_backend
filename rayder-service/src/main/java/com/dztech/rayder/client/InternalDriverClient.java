@@ -24,7 +24,7 @@ public class InternalDriverClient {
 
     public InternalDriverClient(
             RestTemplateBuilder restTemplateBuilder,
-            @Value("${auth.service.base-url:http://localhost:8081}") String authServiceUrl,
+            @Value("${auth.service.base-url:http://dztech-auth-service:8081}") String authServiceUrl,
             @Value("${internal.api.key:}") String internalApiKey) {
         this.restTemplate = restTemplateBuilder.build();
         this.authServiceUrl = authServiceUrl;

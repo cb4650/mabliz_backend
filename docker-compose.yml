@@ -74,6 +74,7 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: secret
       SERVER_PORT: 8082
+      AUTH_SERVICE_BASE_URL: http://dztech-auth-service:8081
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-prod-please-update-1234567890}
       JWT_ISSUER: ${JWT_ISSUER:-dztech-auth-service}
     ports:
