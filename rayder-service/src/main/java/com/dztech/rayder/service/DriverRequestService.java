@@ -1,10 +1,14 @@
 package com.dztech.rayder.service;
 
+import com.dztech.rayder.client.InternalDriverClient;
 import com.dztech.rayder.client.InternalNotificationClient;
 import com.dztech.rayder.dto.CreateDriverRequest;
+import com.dztech.rayder.dto.DriverDetailResponse;
 import com.dztech.rayder.dto.DriverLocationResponse;
 import com.dztech.rayder.dto.DriverRequestDetails;
+import com.dztech.rayder.dto.InternalDriverProfileResponse;
 import com.dztech.rayder.dto.TripConfirmedNotificationRequest;
+import com.dztech.rayder.dto.TripDetailResponse;
 import com.dztech.rayder.exception.ResourceNotFoundException;
 import com.dztech.rayder.model.DriverRequest;
 import com.dztech.rayder.model.Vehicle;
@@ -28,14 +32,17 @@ public class DriverRequestService {
     private final DriverRequestRepository driverRequestRepository;
     private final VehicleRepository vehicleRepository;
     private final InternalNotificationClient internalNotificationClient;
+    private final InternalDriverClient internalDriverClient;
 
     public DriverRequestService(
             DriverRequestRepository driverRequestRepository,
             VehicleRepository vehicleRepository,
-            InternalNotificationClient internalNotificationClient) {
+            InternalNotificationClient internalNotificationClient,
+            InternalDriverClient internalDriverClient) {
         this.driverRequestRepository = driverRequestRepository;
         this.vehicleRepository = vehicleRepository;
         this.internalNotificationClient = internalNotificationClient;
+        this.internalDriverClient = internalDriverClient;
     }
 
     @Transactional
@@ -89,6 +96,55 @@ public class DriverRequestService {
         log.info("Driver request confirmed, now notifying drivers for bookingId: {}", bookingId);
         notifyDrivers(saved);
         return toDetails(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public TripDetailResponse getTripDetails(Long userId, Long bookingId) {
+        log.info("Getting trip details for userId: {}, bookingId: {}", userId, bookingId);
+
+        DriverRequest request = driverRequestRepository
+                .findByIdAndUserId(bookingId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found for current user"));
+
+        DriverDetailResponse driver = null;
+        if (request.getAcceptedDriverId() != null) {
+            InternalDriverProfileResponse driverProfile = internalDriverClient.getDriverProfile(request.getAcceptedDriverId());
+            if (driverProfile != null) {
+                driver = new DriverDetailResponse(
+                        driverProfile.userId(),
+                        driverProfile.fullName(),
+                        driverProfile.email(),
+                        driverProfile.phone());
+            }
+        }
+
+        DriverLocationResponse pickup = new DriverLocationResponse(
+                request.getPickupAddress(),
+                request.getPickupLatitude(),
+                request.getPickupLongitude());
+
+        DriverLocationResponse drop = new DriverLocationResponse(
+                request.getDropAddress(),
+                request.getDropLatitude(),
+                request.getDropLongitude());
+
+        return new TripDetailResponse(
+                request.getId(),
+                request.getBookingType(),
+                request.getTripOption(),
+                request.getVehicle().getId(),
+                request.getHours(),
+                request.getStartTime(),
+                request.getEndTime(),
+                pickup,
+                drop,
+                request.getStatus(),
+                request.getBaseFare(),
+                request.getLateNightCharges(),
+                request.getExtraHourCharges(),
+                request.getFestivalCharges(),
+                request.getEstimate(),
+                driver);
     }
 
     private void validateTimeRange(Instant startTime, Instant endTime) {
