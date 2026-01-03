@@ -7,8 +7,11 @@ import com.dztech.rayder.dto.DriverDetailResponse;
 import com.dztech.rayder.dto.DriverLocationResponse;
 import com.dztech.rayder.dto.DriverRequestDetails;
 import com.dztech.rayder.dto.InternalDriverProfileResponse;
+import com.dztech.rayder.dto.OtpVerificationRequest;
+import com.dztech.rayder.dto.OtpVerificationResponse;
 import com.dztech.rayder.dto.TripConfirmedNotificationRequest;
 import com.dztech.rayder.dto.TripDetailResponse;
+import com.dztech.rayder.dto.VehicleCompletionResponse;
 import com.dztech.rayder.exception.ResourceNotFoundException;
 import com.dztech.rayder.model.DriverRequest;
 import com.dztech.rayder.model.Vehicle;
@@ -146,6 +149,74 @@ public class DriverRequestService {
                 request.getEstimate(),
                 driver,
                 request.getTripOtp());
+    }
+
+    @Transactional(readOnly = true)
+    public VehicleCompletionResponse checkVehicleCompletion(Long userId, Long bookingId) {
+        log.info("Checking vehicle completion for userId: {}, bookingId: {}", userId, bookingId);
+
+        DriverRequest request = driverRequestRepository
+                .findByIdAndUserId(bookingId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found for current user"));
+
+        Vehicle vehicle = request.getVehicle();
+        boolean isCompleted = vehicle.getFuelType() != null
+                && vehicle.getYear() != null && !vehicle.getYear().trim().isEmpty()
+                && vehicle.getPolicyNo() != null && !vehicle.getPolicyNo().trim().isEmpty()
+                && vehicle.getStartDate() != null
+                && vehicle.getExpiryDate() != null;
+
+        log.info("Vehicle completion check for bookingId: {}, vehicleId: {}, isCompleted: {}",
+                bookingId, vehicle.getId(), isCompleted);
+        return new VehicleCompletionResponse(isCompleted);
+    }
+
+    @Transactional
+    public OtpVerificationResponse verifyOtp(Long userId, Long bookingId, OtpVerificationRequest request) {
+        log.info("Verifying OTP for userId: {}, bookingId: {}", userId, bookingId);
+
+        DriverRequest driverRequest = driverRequestRepository
+                .findByIdAndUserId(bookingId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found for current user"));
+
+        // Check if vehicle details are required
+        VehicleCompletionResponse vehicleCompletion = checkVehicleCompletion(userId, bookingId);
+        if (!vehicleCompletion.isVehicleCompleted()) {
+            // Vehicle details are mandatory when vehicle is not completed
+            if (request.fuelType() == null || request.year() == null || request.policyNo() == null
+                    || request.startDate() == null || request.expiryDate() == null) {
+                return new OtpVerificationResponse(false, "Vehicle details are required since vehicle is not completed");
+            }
+        }
+
+        // Verify OTP
+        if (!request.otp().equals(driverRequest.getTripOtp())) {
+            return new OtpVerificationResponse(false, "Invalid OTP");
+        }
+
+        // Mark trip as started
+        Instant now = Instant.now();
+        driverRequest.setStatus("STARTED");
+        driverRequest.setTripStartedAt(now);
+        driverRequestRepository.save(driverRequest);
+
+        // TODO: Handle image uploads here
+        log.info("OTP verified successfully for bookingId: {}, trip marked as STARTED", bookingId);
+
+        // Update vehicle details if provided
+        if (request.fuelType() != null || request.year() != null || request.policyNo() != null
+                || request.startDate() != null || request.expiryDate() != null) {
+            Vehicle vehicle = driverRequest.getVehicle();
+            if (request.fuelType() != null) vehicle.setFuelType(request.fuelType());
+            if (request.year() != null) vehicle.setYear(request.year());
+            if (request.policyNo() != null) vehicle.setPolicyNo(request.policyNo());
+            if (request.startDate() != null) vehicle.setStartDate(request.startDate());
+            if (request.expiryDate() != null) vehicle.setExpiryDate(request.expiryDate());
+            vehicleRepository.save(vehicle);
+            log.info("Updated vehicle details for vehicleId: {}", vehicle.getId());
+        }
+
+        return new OtpVerificationResponse(true, "OTP verified successfully, trip started");
     }
 
     private void validateTimeRange(Instant startTime, Instant endTime) {

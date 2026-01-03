@@ -111,6 +111,9 @@ public class DriverRequest {
     @Column(name = "trip_otp", length = 4)
     private String tripOtp;
 
+    @Column(name = "trip_started_at")
+    private Instant tripStartedAt;
+
     @PrePersist
     private void onCreate() {
         if (createdAt == null) {
