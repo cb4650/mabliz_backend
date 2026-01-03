@@ -12,6 +12,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Random;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -107,6 +108,9 @@ public class DriverRequest {
     @Column(name = "festival_charges", nullable = false, precision = 12, scale = 2)
     private BigDecimal festivalCharges;
 
+    @Column(name = "trip_otp", length = 4)
+    private String tripOtp;
+
     @PrePersist
     private void onCreate() {
         if (createdAt == null) {
@@ -130,5 +134,14 @@ public class DriverRequest {
         if (festivalCharges == null) {
             festivalCharges = BigDecimal.ZERO;
         }
+        if (tripOtp == null) {
+            tripOtp = generateOtp();
+        }
+    }
+
+    private String generateOtp() {
+        Random random = new Random();
+        int otp = 1000 + random.nextInt(9000); // Generates 1000-9999
+        return String.valueOf(otp);
     }
 }

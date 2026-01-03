@@ -19,5 +19,6 @@ public record TripDetailResponse(
         BigDecimal extraHourCharges,
         BigDecimal festivalCharges,
         BigDecimal estimate,
-        DriverDetailResponse driver) {
+        DriverDetailResponse driver,
+        String tripOtp) {
 }

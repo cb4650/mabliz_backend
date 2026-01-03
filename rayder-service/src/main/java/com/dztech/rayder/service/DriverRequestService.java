@@ -144,7 +144,8 @@ public class DriverRequestService {
                 request.getExtraHourCharges(),
                 request.getFestivalCharges(),
                 request.getEstimate(),
-                driver);
+                driver,
+                request.getTripOtp());
     }
 
     private void validateTimeRange(Instant startTime, Instant endTime) {
