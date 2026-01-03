@@ -12,12 +12,15 @@ import com.dztech.rayder.repository.DriverRequestRepository;
 import com.dztech.rayder.repository.VehicleRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DriverRequestService {
 
+    private static final Logger log = LoggerFactory.getLogger(DriverRequestService.class);
     private static final BigDecimal DEFAULT_CHARGE = new BigDecimal("250.00");
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_CONFIRMED = "CONFIRMED";
@@ -37,6 +40,9 @@ public class DriverRequestService {
 
     @Transactional
     public DriverRequestDetails createDriverRequest(Long userId, CreateDriverRequest request) {
+        log.info("Creating driver request for userId: {}, pickup: {}, drop: {}",
+                userId, request.pickup().address(), request.drop().address());
+
         validateTimeRange(request.startTime(), request.endTime());
         FareBreakup breakup = calculateFareBreakup();
 
@@ -66,17 +72,21 @@ public class DriverRequestService {
                 .build();
 
         DriverRequest saved = driverRequestRepository.save(entity);
+        log.info("Driver request created successfully with bookingId: {}", saved.getId());
         return toDetails(saved);
     }
 
     @Transactional
     public DriverRequestDetails confirmDriverRequest(Long userId, Long bookingId) {
+        log.info("Confirming driver request for userId: {}, bookingId: {}", userId, bookingId);
+
         DriverRequest request = driverRequestRepository
                 .findByIdAndUserId(bookingId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found for current user"));
 
         request.setStatus(STATUS_CONFIRMED);
         DriverRequest saved = driverRequestRepository.save(request);
+        log.info("Driver request confirmed, now notifying drivers for bookingId: {}", bookingId);
         notifyDrivers(saved);
         return toDetails(saved);
     }
@@ -137,6 +147,7 @@ public class DriverRequestService {
     }
 
     private void notifyDrivers(DriverRequest request) {
+        log.info("Sending trip confirmation notification to all drivers for bookingId: {}", request.getId());
         TripConfirmedNotificationRequest payload = new TripConfirmedNotificationRequest(
                 request.getId(),
                 request.getPickupAddress(),

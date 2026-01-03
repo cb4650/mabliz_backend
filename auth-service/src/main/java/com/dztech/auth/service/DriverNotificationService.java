@@ -31,6 +31,8 @@ public class DriverNotificationService {
     }
 
     public void sendTripConfirmation(TripConfirmedNotificationRequest request) {
+        log.info("Starting trip confirmation notification for bookingId: {}", request.bookingId());
+
         FirebaseMessaging messaging = firebaseMessagingProvider.getIfAvailable();
         if (messaging == null) {
             log.warn("FirebaseMessaging bean is unavailable; skipping trip confirmation push notification");
@@ -43,6 +45,8 @@ public class DriverNotificationService {
                 .map(String::trim)
                 .distinct()
                 .toList();
+
+        log.debug("Found {} driver FCM tokens for notification", tokens.size());
 
         if (tokens.isEmpty()) {
             log.info("No driver FCM tokens found; skipping trip confirmation notification");

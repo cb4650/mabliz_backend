@@ -34,6 +34,8 @@ public class InternalNotificationClient {
     }
 
     public void sendTripConfirmed(TripConfirmedNotificationRequest request) {
+        log.info("Sending trip confirmation notification for bookingId: {}", request.bookingId());
+
         if (!StringUtils.hasText(internalApiKey)) {
             log.warn("Internal API key is not configured; skipping push notification call");
             return;
@@ -46,9 +48,11 @@ public class InternalNotificationClient {
             HttpEntity<TripConfirmedNotificationRequest> entity = new HttpEntity<>(request, headers);
 
             String url = authServiceBaseUrl + "/api/internal/notifications/trip-confirmed";
+            log.debug("Making HTTP call to auth-service: {}", url);
             restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+            log.info("Successfully sent trip confirmation notification to auth-service");
         } catch (RestClientException ex) {
-            log.error("Failed to notify auth-service about trip confirmation", ex);
+            log.error("Failed to notify auth-service about trip confirmation for bookingId: {}", request.bookingId(), ex);
         }
     }
 }
