@@ -9,6 +9,7 @@ import com.dztech.rayder.dto.OtpVerificationResponse;
 import com.dztech.rayder.dto.VehicleCompletionResponse;
 import com.dztech.rayder.security.AuthenticatedUserProvider;
 import com.dztech.rayder.service.DriverTripResponseService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import jakarta.validation.Valid;
 
 @RestController
@@ -69,9 +71,9 @@ public class DriverTripResponseController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{bookingId}/verify-otp")
+    @PostMapping(value = "/{bookingId}/verify-otp", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<OtpVerificationResponse> verifyOtp(
-            @PathVariable Long bookingId, @RequestBody @Valid OtpVerificationRequest request) {
+            @PathVariable Long bookingId, @ModelAttribute @Valid OtpVerificationRequest request) {
         Long driverId = authenticatedUserProvider.getCurrentUserId();
         OtpVerificationResponse response = driverTripResponseService.verifyOtpForDriver(driverId, bookingId, request);
         return ResponseEntity.ok(response);
