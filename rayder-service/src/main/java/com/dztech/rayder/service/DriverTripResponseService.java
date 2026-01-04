@@ -3,6 +3,8 @@ package com.dztech.rayder.service;
 import com.dztech.rayder.dto.DriverTripActionResponse;
 import com.dztech.rayder.dto.DriverTripDepartureResponse;
 import com.dztech.rayder.dto.DriverTripDetailResponse;
+import com.dztech.rayder.dto.VehicleCompletionResponse;
+import com.dztech.rayder.model.Vehicle;
 import com.dztech.rayder.exception.ResourceNotFoundException;
 import com.dztech.rayder.model.DriverRequest;
 import com.dztech.rayder.model.DriverTripResponse;
@@ -146,6 +148,26 @@ public class DriverTripResponseService {
                 userProfile.map(UserProfile::getAddress).orElse(null));
 
         return new DriverTripDetailResponse(true, "Trip details", data);
+    }
+
+    @Transactional(readOnly = true)
+    public VehicleCompletionResponse checkVehicleCompletionForDriver(Long driverId, Long bookingId) {
+        DriverRequest request = driverRequestRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (request.getAcceptedDriverId() == null || !request.getAcceptedDriverId().equals(driverId)) {
+            throw new IllegalArgumentException("Trip is not assigned to this driver");
+        }
+
+        Vehicle vehicle = request.getVehicle();
+        boolean isCompleted = vehicle.getFuelType() != null
+                && vehicle.getYear() != null && !vehicle.getYear().trim().isEmpty()
+                && vehicle.getPolicyNo() != null && !vehicle.getPolicyNo().trim().isEmpty()
+                && vehicle.getStartDate() != null
+                && vehicle.getExpiryDate() != null;
+
+        return new VehicleCompletionResponse(isCompleted);
     }
 
     private DriverTripActionResponse toActionResponse(

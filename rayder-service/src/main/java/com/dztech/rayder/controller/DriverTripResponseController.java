@@ -4,6 +4,7 @@ import com.dztech.rayder.dto.DriverTripActionResponse;
 import com.dztech.rayder.dto.DriverTripDepartureResponse;
 import com.dztech.rayder.dto.DriverTripDetailResponse;
 import com.dztech.rayder.dto.DriverDepartureRequest;
+import com.dztech.rayder.dto.VehicleCompletionResponse;
 import com.dztech.rayder.security.AuthenticatedUserProvider;
 import com.dztech.rayder.service.DriverTripResponseService;
 import org.springframework.http.ResponseEntity;
@@ -56,6 +57,13 @@ public class DriverTripResponseController {
         Long driverId = authenticatedUserProvider.getCurrentUserId();
         DriverTripDepartureResponse response = driverTripResponseService.markDeparted(
                 driverId, bookingId, request.latitude(), request.longitude());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{bookingId}/vehicle-completion")
+    public ResponseEntity<VehicleCompletionResponse> checkVehicleCompletion(@PathVariable Long bookingId) {
+        Long driverId = authenticatedUserProvider.getCurrentUserId();
+        VehicleCompletionResponse response = driverTripResponseService.checkVehicleCompletionForDriver(driverId, bookingId);
         return ResponseEntity.ok(response);
     }
 }
