@@ -4,6 +4,8 @@ import com.dztech.rayder.dto.DriverTripActionResponse;
 import com.dztech.rayder.dto.DriverTripDepartureResponse;
 import com.dztech.rayder.dto.DriverTripDetailResponse;
 import com.dztech.rayder.dto.DriverDepartureRequest;
+import com.dztech.rayder.dto.OtpVerificationRequest;
+import com.dztech.rayder.dto.OtpVerificationResponse;
 import com.dztech.rayder.dto.VehicleCompletionResponse;
 import com.dztech.rayder.security.AuthenticatedUserProvider;
 import com.dztech.rayder.service.DriverTripResponseService;
@@ -64,6 +66,14 @@ public class DriverTripResponseController {
     public ResponseEntity<VehicleCompletionResponse> checkVehicleCompletion(@PathVariable Long bookingId) {
         Long driverId = authenticatedUserProvider.getCurrentUserId();
         VehicleCompletionResponse response = driverTripResponseService.checkVehicleCompletionForDriver(driverId, bookingId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{bookingId}/verify-otp")
+    public ResponseEntity<OtpVerificationResponse> verifyOtp(
+            @PathVariable Long bookingId, @RequestBody @Valid OtpVerificationRequest request) {
+        Long driverId = authenticatedUserProvider.getCurrentUserId();
+        OtpVerificationResponse response = driverTripResponseService.verifyOtpForDriver(driverId, bookingId, request);
         return ResponseEntity.ok(response);
     }
 }

