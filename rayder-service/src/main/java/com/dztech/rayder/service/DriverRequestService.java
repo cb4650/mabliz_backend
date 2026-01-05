@@ -2,6 +2,7 @@ package com.dztech.rayder.service;
 
 import com.dztech.rayder.client.InternalDriverClient;
 import com.dztech.rayder.client.InternalNotificationClient;
+import com.dztech.rayder.client.InternalUserClient;
 import com.dztech.rayder.dto.CreateDriverRequest;
 import com.dztech.rayder.dto.DriverDetailResponse;
 import com.dztech.rayder.dto.DriverLocationResponse;
@@ -16,8 +17,8 @@ import com.dztech.rayder.exception.ResourceNotFoundException;
 import com.dztech.rayder.model.DriverRequest;
 import com.dztech.rayder.model.Vehicle;
 import com.dztech.rayder.repository.DriverRequestRepository;
-import com.dztech.rayder.repository.UserProfileRepository;
 import com.dztech.rayder.repository.VehicleRepository;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.slf4j.Logger;
@@ -35,21 +36,21 @@ public class DriverRequestService {
 
     private final DriverRequestRepository driverRequestRepository;
     private final VehicleRepository vehicleRepository;
-    private final UserProfileRepository userProfileRepository;
     private final InternalNotificationClient internalNotificationClient;
     private final InternalDriverClient internalDriverClient;
+    private final InternalUserClient internalUserClient;
 
     public DriverRequestService(
             DriverRequestRepository driverRequestRepository,
             VehicleRepository vehicleRepository,
-            UserProfileRepository userProfileRepository,
             InternalNotificationClient internalNotificationClient,
-            InternalDriverClient internalDriverClient) {
+            InternalDriverClient internalDriverClient,
+            InternalUserClient internalUserClient) {
         this.driverRequestRepository = driverRequestRepository;
         this.vehicleRepository = vehicleRepository;
-        this.userProfileRepository = userProfileRepository;
         this.internalNotificationClient = internalNotificationClient;
         this.internalDriverClient = internalDriverClient;
+        this.internalUserClient = internalUserClient;
     }
 
     @Transactional
@@ -283,10 +284,12 @@ public class DriverRequestService {
     private void notifyDrivers(DriverRequest request) {
         log.info("Sending trip confirmation notification to all drivers for bookingId: {}", request.getId());
 
-        // Get customer name from user profile
-        String customerName = userProfileRepository.findById(request.getUserId())
-                .map(userProfile -> userProfile.getName())
-                .orElse("Unknown Customer");
+        // Get customer name from auth service
+        String customerName = "Unknown Customer";
+        InternalDriverProfileResponse userProfile = internalUserClient.getUserProfile(request.getUserId());
+        if (userProfile != null) {
+            customerName = userProfile.fullName();
+        }
 
         // Get vehicle details
         Vehicle vehicle = request.getVehicle();

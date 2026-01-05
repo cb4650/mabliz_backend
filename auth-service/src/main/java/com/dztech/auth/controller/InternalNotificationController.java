@@ -3,8 +3,10 @@ package com.dztech.auth.controller;
 import com.dztech.auth.dto.DriverProfileView;
 import com.dztech.auth.dto.InternalDriverProfileResponse;
 import com.dztech.auth.dto.TripConfirmedNotificationRequest;
+import com.dztech.auth.dto.UserProfileView;
 import com.dztech.auth.service.DriverNotificationService;
 import com.dztech.auth.service.DriverProfileService;
+import com.dztech.auth.service.ProfileService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,14 +31,17 @@ public class InternalNotificationController {
 
     private final DriverNotificationService driverNotificationService;
     private final DriverProfileService driverProfileService;
+    private final ProfileService profileService;
     private final String internalApiKey;
 
     public InternalNotificationController(
             DriverNotificationService driverNotificationService,
             DriverProfileService driverProfileService,
+            ProfileService profileService,
             @Value("${internal.api.key:}") String internalApiKey) {
         this.driverNotificationService = driverNotificationService;
         this.driverProfileService = driverProfileService;
+        this.profileService = profileService;
         this.internalApiKey = internalApiKey;
     }
 
@@ -79,6 +84,32 @@ public class InternalNotificationController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error retrieving driver profile for driverId: {}", driverId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<InternalDriverProfileResponse> getUserProfile(
+            @RequestHeader(value = INTERNAL_API_KEY_HEADER, required = false) String apiKey,
+            @PathVariable Long userId) {
+        log.info("Received request to get user profile for userId: {}", userId);
+
+        if (!StringUtils.hasText(internalApiKey) || !internalApiKey.equals(apiKey)) {
+            log.warn("Unauthorized request to get user profile - invalid API key");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            UserProfileView profile = profileService.getProfile(userId, null);
+            InternalDriverProfileResponse response = new InternalDriverProfileResponse(
+                    profile.id(),
+                    profile.name(),
+                    profile.email(),
+                    profile.phone());
+            log.info("User profile retrieved successfully for userId: {}", userId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error retrieving user profile for userId: {}", userId, e);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
