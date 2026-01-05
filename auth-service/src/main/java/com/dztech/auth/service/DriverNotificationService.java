@@ -66,6 +66,11 @@ public class DriverNotificationService {
                 .putData("drop", request.dropAddress())
                 .putData("startTime", request.startTime().toString())
                 .putData("endTime", request.endTime().toString())
+                .putData("customerName", request.customerName())
+                .putData("estimatedFare", request.estimatedFare().toString())
+                .putData("vehicleBrand", request.vehicleBrand())
+                .putData("vehicleModel", request.vehicleModel())
+                .putData("vehicleNumber", request.vehicleNumber() != null ? request.vehicleNumber() : "")
                 .addAllTokens(tokens)
                 .build();
 

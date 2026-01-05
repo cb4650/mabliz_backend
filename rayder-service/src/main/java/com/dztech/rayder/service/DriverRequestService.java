@@ -16,6 +16,7 @@ import com.dztech.rayder.exception.ResourceNotFoundException;
 import com.dztech.rayder.model.DriverRequest;
 import com.dztech.rayder.model.Vehicle;
 import com.dztech.rayder.repository.DriverRequestRepository;
+import com.dztech.rayder.repository.UserProfileRepository;
 import com.dztech.rayder.repository.VehicleRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -34,16 +35,19 @@ public class DriverRequestService {
 
     private final DriverRequestRepository driverRequestRepository;
     private final VehicleRepository vehicleRepository;
+    private final UserProfileRepository userProfileRepository;
     private final InternalNotificationClient internalNotificationClient;
     private final InternalDriverClient internalDriverClient;
 
     public DriverRequestService(
             DriverRequestRepository driverRequestRepository,
             VehicleRepository vehicleRepository,
+            UserProfileRepository userProfileRepository,
             InternalNotificationClient internalNotificationClient,
             InternalDriverClient internalDriverClient) {
         this.driverRequestRepository = driverRequestRepository;
         this.vehicleRepository = vehicleRepository;
+        this.userProfileRepository = userProfileRepository;
         this.internalNotificationClient = internalNotificationClient;
         this.internalDriverClient = internalDriverClient;
     }
@@ -278,12 +282,29 @@ public class DriverRequestService {
 
     private void notifyDrivers(DriverRequest request) {
         log.info("Sending trip confirmation notification to all drivers for bookingId: {}", request.getId());
+
+        // Get customer name from user profile
+        String customerName = userProfileRepository.findById(request.getUserId())
+                .map(userProfile -> userProfile.getName())
+                .orElse("Unknown Customer");
+
+        // Get vehicle details
+        Vehicle vehicle = request.getVehicle();
+        String vehicleBrand = vehicle.getBrand() != null ? vehicle.getBrand().getName() : "Unknown Brand";
+        String vehicleModel = vehicle.getModel() != null ? vehicle.getModel().getName() : "Unknown Model";
+        String vehicleNumber = vehicle.getVehicleNo();
+
         TripConfirmedNotificationRequest payload = new TripConfirmedNotificationRequest(
                 request.getId(),
                 request.getPickupAddress(),
                 request.getDropAddress(),
                 request.getStartTime(),
-                request.getEndTime());
+                request.getEndTime(),
+                customerName,
+                request.getEstimate(),
+                vehicleBrand,
+                vehicleModel,
+                vehicleNumber);
         internalNotificationClient.sendTripConfirmed(payload);
     }
 }
