@@ -60,7 +60,7 @@ public class DriverNotificationService {
 
         MulticastMessage message = MulticastMessage.builder()
                 .setNotification(notification)
-                .putData("type", "TRIP_CONFIRMED")
+                .putData("type", "New Incoming Ride")
                 .putData("bookingId", String.valueOf(request.bookingId()))
                 .putData("pickup", request.pickupAddress())
                 .putData("drop", request.dropAddress())
