@@ -56,7 +56,7 @@ public class DriverRequestService {
     @Transactional
     public DriverRequestDetails createDriverRequest(Long userId, CreateDriverRequest request) {
         log.info("Creating driver request for userId: {}, pickup: {}, drop: {}",
-                userId, request.pickup().address(), request.drop().address());
+                userId, request.pickup().address(), request.drop() != null ? request.drop().address() : null);
 
         validateTimeRange(request.startTime(), request.endTime());
         FareBreakup breakup = calculateFareBreakup();
@@ -75,9 +75,9 @@ public class DriverRequestService {
                 .pickupAddress(request.pickup().address().trim())
                 .pickupLatitude(request.pickup().latitude())
                 .pickupLongitude(request.pickup().longitude())
-                .dropAddress(request.drop().address().trim())
-                .dropLatitude(request.drop().latitude())
-                .dropLongitude(request.drop().longitude())
+                .dropAddress(request.drop() != null ? request.drop().address().trim() : null)
+                .dropLatitude(request.drop() != null ? request.drop().latitude() : null)
+                .dropLongitude(request.drop() != null ? request.drop().longitude() : null)
                 .status(STATUS_PENDING)
                 .estimate(breakup.estimate())
                 .baseFare(breakup.baseFare())
@@ -131,10 +131,11 @@ public class DriverRequestService {
                 request.getPickupLatitude(),
                 request.getPickupLongitude());
 
-        DriverLocationResponse drop = new DriverLocationResponse(
-                request.getDropAddress(),
-                request.getDropLatitude(),
-                request.getDropLongitude());
+        DriverLocationResponse drop = request.getDropAddress() != null ?
+                new DriverLocationResponse(
+                        request.getDropAddress(),
+                        request.getDropLatitude(),
+                        request.getDropLongitude()) : null;
 
         return new TripDetailResponse(
                 request.getId(),
@@ -238,10 +239,11 @@ public class DriverRequestService {
                 request.getPickupLatitude(),
                 request.getPickupLongitude());
 
-        DriverLocationResponse drop = new DriverLocationResponse(
-                request.getDropAddress(),
-                request.getDropLatitude(),
-                request.getDropLongitude());
+        DriverLocationResponse drop = request.getDropAddress() != null ?
+                new DriverLocationResponse(
+                        request.getDropAddress(),
+                        request.getDropLatitude(),
+                        request.getDropLongitude()) : null;
 
         return new DriverRequestDetails(
                 request.getId(),

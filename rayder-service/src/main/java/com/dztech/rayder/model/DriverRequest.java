@@ -63,13 +63,13 @@ public class DriverRequest {
     @Column(name = "pickup_longitude", nullable = false, precision = 10, scale = 6)
     private BigDecimal pickupLongitude;
 
-    @Column(name = "drop_address", nullable = false, length = 255)
+    @Column(name = "drop_address", length = 255)
     private String dropAddress;
 
-    @Column(name = "drop_latitude", nullable = false, precision = 10, scale = 6)
+    @Column(name = "drop_latitude", precision = 10, scale = 6)
     private BigDecimal dropLatitude;
 
-    @Column(name = "drop_longitude", nullable = false, precision = 10, scale = 6)
+    @Column(name = "drop_longitude", precision = 10, scale = 6)
     private BigDecimal dropLongitude;
 
     @Column(name = "created_at", nullable = false)

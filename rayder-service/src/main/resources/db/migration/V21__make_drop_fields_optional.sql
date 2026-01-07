@@ -1,0 +1,4 @@
+ALTER TABLE driver_requests
+MODIFY COLUMN drop_address VARCHAR(255) NULL,
+MODIFY COLUMN drop_latitude DECIMAL(10,6) NULL,
+MODIFY COLUMN drop_longitude DECIMAL(10,6) NULL;

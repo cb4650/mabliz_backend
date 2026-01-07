@@ -33,7 +33,6 @@ public record CreateDriverRequest(
         @Valid
         DriverLocationRequest pickup,
 
-        @NotNull(message = "Drop location is required")
         @Valid
         DriverLocationRequest drop) {
 }
