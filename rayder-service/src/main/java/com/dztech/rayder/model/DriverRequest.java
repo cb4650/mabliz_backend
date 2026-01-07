@@ -114,6 +114,15 @@ public class DriverRequest {
     @Column(name = "trip_started_at")
     private Instant tripStartedAt;
 
+    @Column(name = "trip_closed_at")
+    private Instant tripClosedAt;
+
+    @Column(name = "trip_closed_latitude", precision = 10, scale = 6)
+    private BigDecimal tripClosedLatitude;
+
+    @Column(name = "trip_closed_longitude", precision = 10, scale = 6)
+    private BigDecimal tripClosedLongitude;
+
     @PrePersist
     private void onCreate() {
         if (createdAt == null) {

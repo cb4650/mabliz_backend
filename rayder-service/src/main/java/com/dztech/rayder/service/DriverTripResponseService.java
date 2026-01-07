@@ -1,8 +1,11 @@
 package com.dztech.rayder.service;
 
 import com.dztech.rayder.dto.DriverTripActionResponse;
+import com.dztech.rayder.dto.DriverTripCloseRequest;
+import com.dztech.rayder.dto.DriverTripCloseResponse;
 import com.dztech.rayder.dto.DriverTripDepartureResponse;
 import com.dztech.rayder.dto.DriverTripDetailResponse;
+import com.dztech.rayder.dto.DriverTripListResponse;
 import com.dztech.rayder.dto.OtpVerificationRequest;
 import com.dztech.rayder.dto.OtpVerificationResponse;
 import com.dztech.rayder.dto.VehicleCompletionResponse;
@@ -16,6 +19,8 @@ import com.dztech.rayder.repository.DriverRequestRepository;
 import com.dztech.rayder.repository.DriverTripResponseRepository;
 import com.dztech.rayder.repository.UserProfileRepository;
 import java.util.Optional;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.time.Instant;
 import java.math.BigDecimal;
 import org.slf4j.Logger;
@@ -123,6 +128,32 @@ public class DriverTripResponseService {
         return new DriverTripDepartureResponse(true, "Driver marked as departed", data);
     }
 
+    @Transactional
+    public DriverTripCloseResponse closeTrip(Long driverId, Long bookingId, BigDecimal latitude, BigDecimal longitude) {
+        DriverRequest request = driverRequestRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (request.getAcceptedDriverId() == null || !request.getAcceptedDriverId().equals(driverId)) {
+            throw new IllegalArgumentException("Trip is not assigned to this driver");
+        }
+
+        if (!"STARTED".equals(request.getStatus())) {
+            throw new IllegalArgumentException("Trip must be started before it can be closed");
+        }
+
+        Instant now = Instant.now();
+        request.setTripClosedAt(now);
+        request.setTripClosedLatitude(latitude);
+        request.setTripClosedLongitude(longitude);
+        request.setStatus("COMPLETED");
+        driverRequestRepository.save(request);
+
+        DriverTripCloseResponse.Data data = new DriverTripCloseResponse.Data(
+                bookingId, driverId, now, latitude, longitude);
+        return new DriverTripCloseResponse(true, "Trip closed successfully", data);
+    }
+
     @Transactional(readOnly = true)
     public DriverTripDetailResponse getTripForDriver(Long driverId, Long bookingId) {
         DriverRequest request = driverRequestRepository
@@ -227,6 +258,54 @@ public class DriverTripResponseService {
         }
 
         return new OtpVerificationResponse(true, "OTP verified successfully, trip started");
+    }
+
+    @Transactional(readOnly = true)
+    public DriverTripListResponse getTripsByStatus(Long driverId, String status) {
+        List<String> statuses;
+
+        switch (status.toUpperCase()) {
+            case "ACTIVE":
+                statuses = List.of("STARTED");
+                break;
+            case "UPCOMING":
+                statuses = List.of("ACCEPTED", "DEPARTED");
+                break;
+            case "CLOSED":
+                statuses = List.of("COMPLETED");
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid status: " + status + ". Valid values are: ACTIVE, UPCOMING, CLOSED");
+        }
+
+        List<DriverRequest> requests = driverRequestRepository.findByAcceptedDriverIdAndStatusIn(driverId, statuses);
+
+        List<DriverTripListResponse.DriverTripListItem> items = requests.stream()
+                .map(request -> {
+                    Optional<UserProfile> userProfile = userProfileRepository.findById(request.getUserId());
+                    return new DriverTripListResponse.DriverTripListItem(
+                            request.getId(),
+                            request.getBookingType(),
+                            request.getTripOption(),
+                            request.getHours(),
+                            request.getStartTime(),
+                            request.getEndTime(),
+                            request.getPickupAddress(),
+                            request.getPickupLatitude(),
+                            request.getPickupLongitude(),
+                            request.getDropAddress(),
+                            request.getDropLatitude(),
+                            request.getDropLongitude(),
+                            userProfile.map(UserProfile::getName).orElse(null),
+                            userProfile.map(UserProfile::getPhone).orElse(null),
+                            request.getStatus(),
+                            request.getCreatedAt(),
+                            request.getEstimate());
+                })
+                .collect(Collectors.toList());
+
+        String message = String.format("Found %d %s trips", items.size(), status.toLowerCase());
+        return new DriverTripListResponse(true, message, items);
     }
 
     private DriverTripActionResponse toActionResponse(
