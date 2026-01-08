@@ -69,6 +69,10 @@ public class DriverTripResponseService {
             throw new IllegalArgumentException("Trip already accepted by another driver");
         }
 
+        // Update the driver request status to ACCEPTED
+        request.setStatus("ACCEPTED");
+        driverRequestRepository.save(request);
+
         DriverTripResponse response = existingResponse != null ? existingResponse : new DriverTripResponse();
         response.setBookingId(bookingId);
         response.setDriverId(driverId);
