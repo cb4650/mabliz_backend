@@ -58,6 +58,27 @@ public class DriverRegistrationService {
                     throw new IllegalArgumentException("Invalid email address or email already registered");
                 });
 
+        // Update profile with additional fields if provided
+        driverProfileRepository.findById(userId).ifPresent(profile -> {
+            boolean updated = false;
+            if (StringUtils.hasText(request.gender()) && !StringUtils.hasText(profile.getGender())) {
+                profile.setGender(request.gender());
+                updated = true;
+            }
+            if (StringUtils.hasText(request.dob()) && !StringUtils.hasText(profile.getDob())) {
+                profile.setDob(request.dob());
+                updated = true;
+            }
+            if (request.languages() != null && !request.languages().isEmpty() &&
+                (profile.getLanguages() == null || profile.getLanguages().isEmpty())) {
+                profile.setLanguages(request.languages());
+                updated = true;
+            }
+            if (updated) {
+                driverProfileRepository.save(profile);
+            }
+        });
+
         driverEmailOtpService.sendOtp(userId, normalizedEmail, request.name());
         long expiresIn = driverEmailOtpService.getExpirySeconds();
 

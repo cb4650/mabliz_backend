@@ -1,0 +1,50 @@
+CREATE TABLE IF NOT EXISTS districts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_districts_name ON districts (name);
+CREATE INDEX idx_districts_is_active ON districts (is_active);
+
+INSERT INTO districts (name, is_active) VALUES
+('Ariyalur', true),
+('Chengalpattu', true),
+('Chennai', true),
+('Coimbatore', true),
+('Cuddalore', true),
+('Dharmapuri', true),
+('Dindigul', true),
+('Erode', true),
+('Kallakurichi', true),
+('Kancheepuram', true),
+('Kanniyakumari', true),
+('Karur', true),
+('Krishnagiri', true),
+('Madurai', true),
+('Mayiladuthurai', true),
+('Nagapattinam', true),
+('Namakkal', true),
+('Perambalur', true),
+('Pudukkottai', true),
+('Ramanathapuram', true),
+('Ranipet', true),
+('Salem', true),
+('Sivaganga', true),
+('Tenkasi', true),
+('Thanjavur', true),
+('Theni', true),
+('The Nilgiris', true),
+('Thoothukudi', true),
+('Tiruchirappalli', true),
+('Tirunelveli', true),
+('Tirupathur', true),
+('Tiruppur', true),
+('Tiruvallur', true),
+('Tiruvannamalai', true),
+('Tiruvarur', true),
+('Vellore', true),
+('Viluppuram', true),
+('Virudhunagar', true);

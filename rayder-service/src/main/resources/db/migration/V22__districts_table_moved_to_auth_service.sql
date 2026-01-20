@@ -1,0 +1,1 @@
+-- Districts table is now created in auth-service migration V19
