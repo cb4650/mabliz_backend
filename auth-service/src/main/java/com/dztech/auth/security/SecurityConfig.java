@@ -38,6 +38,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/internal/notifications/trip-confirmed").permitAll()
                         .requestMatchers("/api/force-update/**").permitAll()
                         .requestMatchers("/api/internal/**").permitAll()
+                        .requestMatchers("/api/faq/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/driver/email/otp", "/api/driver/email/verify").authenticated()
                         .anyRequest().authenticated())

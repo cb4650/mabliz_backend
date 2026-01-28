@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,12 +52,14 @@ public class FaqController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FaqResponse> createFaq(@Valid @RequestBody FaqRequest request) {
         FaqResponse faq = faqService.createFaq(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(faq);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FaqResponse> updateFaq(
             @PathVariable Long id,
             @Valid @RequestBody FaqRequest request) {
@@ -65,6 +68,7 @@ public class FaqController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteFaq(@PathVariable Long id) {
         faqService.deleteFaq(id);
         return ResponseEntity.noContent().build();
