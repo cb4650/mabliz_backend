@@ -140,4 +140,15 @@ public class DriverVehicleService {
         }
         return value.trim();
     }
+
+    public List<DriverVehicleView> getDriverVehicles(Long userId) {
+        if (!driverProfileRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("Driver profile not found");
+        }
+        
+        return driverVehicleRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(this::toView)
+                .toList();
+    }
 }

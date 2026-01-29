@@ -7,9 +7,12 @@ import com.dztech.auth.exception.ResourceNotFoundException;
 import com.dztech.auth.security.AuthenticatedUserProvider;
 import com.dztech.auth.service.DriverVehicleService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,5 +45,12 @@ public class DriverVehicleController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new DriverVehicleCreateResponse(false, ex.getMessage(), null));
         }
+    }
+
+    @GetMapping
+    public ResponseEntity<List<DriverVehicleView>> getDriverVehicles(Authentication authentication) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        List<DriverVehicleView> vehicles = driverVehicleService.getDriverVehicles(userId);
+        return ResponseEntity.ok(vehicles);
     }
 }

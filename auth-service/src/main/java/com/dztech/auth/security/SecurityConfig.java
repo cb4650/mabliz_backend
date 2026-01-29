@@ -39,6 +39,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/force-update/**").permitAll()
                         .requestMatchers("/api/internal/**").permitAll()
                         .requestMatchers("/api/faq/**").permitAll()
+                        .requestMatchers("/api/about/**").permitAll()
+                        .requestMatchers("/api/notification/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/driver/email/otp", "/api/driver/email/verify").authenticated()
                         .anyRequest().authenticated())
