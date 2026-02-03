@@ -11,4 +11,8 @@ public interface DriverProfileRepository extends JpaRepository<DriverProfile, Lo
     Optional<DriverProfile> findByPhone(String phone);
 
     List<DriverProfile> findAllByFcmTokenIsNotNull();
+
+    boolean existsByEmailAndUserIdNot(String email, Long userId);
+
+    boolean existsByPhoneAndUserIdNot(String phone, Long userId);
 }

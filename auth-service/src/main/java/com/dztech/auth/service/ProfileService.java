@@ -1,7 +1,16 @@
 package com.dztech.auth.service;
 
+import com.dztech.auth.client.OtpProviderClient;
 import com.dztech.auth.client.RayderVehicleClient;
+import com.dztech.auth.dto.ChangeEmailRequest;
+import com.dztech.auth.dto.ChangeEmailResponse;
+import com.dztech.auth.dto.ChangeMobileRequest;
+import com.dztech.auth.dto.ChangeMobileResponse;
 import com.dztech.auth.dto.PreferredLanguageView;
+import com.dztech.auth.dto.RequestEmailChangeOtpRequest;
+import com.dztech.auth.dto.RequestEmailChangeOtpResponse;
+import com.dztech.auth.dto.RequestMobileChangeOtpRequest;
+import com.dztech.auth.dto.RequestMobileChangeOtpResponse;
 import com.dztech.auth.dto.UpdateUserProfileRequest;
 import com.dztech.auth.dto.UpdateUserPreferredLanguagesRequest;
 import com.dztech.auth.dto.UserProfileView;
@@ -25,16 +34,19 @@ public class ProfileService {
     private final RayderVehicleClient rayderVehicleClient;
     private final PreferredLanguageRepository preferredLanguageRepository;
     private final EmailOtpService emailOtpService;
+    private final OtpProviderClient otpProviderClient;
 
     public ProfileService(
             UserProfileRepository userProfileRepository,
             RayderVehicleClient rayderVehicleClient,
             PreferredLanguageRepository preferredLanguageRepository,
-            EmailOtpService emailOtpService) {
+            EmailOtpService emailOtpService,
+            OtpProviderClient otpProviderClient) {
         this.userProfileRepository = userProfileRepository;
         this.rayderVehicleClient = rayderVehicleClient;
         this.preferredLanguageRepository = preferredLanguageRepository;
         this.emailOtpService = emailOtpService;
+        this.otpProviderClient = otpProviderClient;
     }
 
     @Transactional(readOnly = true)
@@ -46,99 +58,113 @@ public class ProfileService {
     }
 
     @Transactional
-    public UserProfileView updateProfile(Long userId, UpdateUserProfileRequest request, String accessToken) {
+    public RequestEmailChangeOtpResponse requestEmailChangeOtp(Long userId, RequestEmailChangeOtpRequest request) {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
 
-        if (request.name() != null) {
-            String name = request.name().trim();
-            if (name.isEmpty()) {
-                throw new IllegalArgumentException("Name cannot be blank");
-            }
-            profile.setName(name);
+        String newEmail = request.getNewEmail().trim().toLowerCase();
+        
+        // Check if email is already in use by another user
+        if (userProfileRepository.existsByEmailAndUserIdNot(newEmail, userId)) {
+            throw new IllegalArgumentException("Email is already in use by another account");
         }
 
-        boolean emailChanged = false;
-        if (request.email() != null) {
-            String email = request.email().trim();
-            if (email.isEmpty()) {
-                throw new IllegalArgumentException("Email cannot be blank");
-            }
-            String normalizedEmail = email.toLowerCase();
-            String currentEmail = profile.getEmail();
-            if (currentEmail == null || !currentEmail.equalsIgnoreCase(normalizedEmail)) {
-                profile.setEmail(normalizedEmail);
-                profile.setEmailVerified(false);
-                emailChanged = true;
-            }
+        // Send OTP to current phone number for verification
+        try {
+            otpProviderClient.sendOtp(profile.getPhone(), "Your OTP for email change is: {otp}");
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send OTP to phone: " + e.getMessage());
         }
 
-        if (request.address() != null) {
-            String address = request.address().trim();
-            profile.setAddress(StringUtils.hasText(address) ? address : null);
-        }
-
-        if (request.primaryPreferredLanguageId() != null) {
-            profile.setPrimaryPreferredLanguage(resolvePreferredLanguage(request.primaryPreferredLanguageId()));
-        }
-
-        if (request.secondaryPreferredLanguageId() != null) {
-            profile.setSecondaryPreferredLanguage(resolvePreferredLanguage(request.secondaryPreferredLanguageId()));
-        }
-
-        UserProfile updated = userProfileRepository.save(profile);
-
-        if (emailChanged) {
-            emailOtpService.sendVerificationOtp(
-                    userId, updated.getEmail(), updated.getName());
-        }
-
-        return toView(updated, accessToken);
-    }
-
-    @Transactional(readOnly = true)
-    public List<PreferredLanguageView> listPreferredLanguages() {
-        return preferredLanguageRepository.findAll(Sort.by("name").ascending()).stream()
-                .map(this::toLanguageView)
-                .collect(Collectors.toList());
+        return RequestEmailChangeOtpResponse.builder()
+                .success(true)
+                .message("OTP sent to your current phone number for email change verification")
+                .newEmail(newEmail)
+                .build();
     }
 
     @Transactional
-    public UserProfileView updatePreferredLanguages(
-            Long userId, UpdateUserPreferredLanguagesRequest request, String accessToken) {
+    public RequestMobileChangeOtpResponse requestMobileChangeOtp(Long userId, RequestMobileChangeOtpRequest request) {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
 
-        if (request.primaryPreferredLanguageId() != null) {
-            profile.setPrimaryPreferredLanguage(resolvePreferredLanguage(request.primaryPreferredLanguageId()));
+        String newPhone = request.getNewPhone().trim();
+        
+        // Check if phone is already in use by another user
+        if (userProfileRepository.existsByPhoneAndUserIdNot(newPhone, userId)) {
+            throw new IllegalArgumentException("Phone number is already in use by another account");
         }
 
-        if (request.secondaryPreferredLanguageId() != null) {
-            profile.setSecondaryPreferredLanguage(resolvePreferredLanguage(request.secondaryPreferredLanguageId()));
+        // Send OTP to current email for verification
+        try {
+            emailOtpService.sendVerificationOtp(userId, profile.getEmail(), "Your OTP for mobile change is: {otp}");
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send OTP to email: " + e.getMessage());
         }
 
-        UserProfile updated = userProfileRepository.save(profile);
-        return toView(updated, accessToken);
+        return RequestMobileChangeOtpResponse.builder()
+                .success(true)
+                .message("OTP sent to your current email for mobile change verification")
+                .newPhone(newPhone)
+                .build();
     }
 
     @Transactional
-    public UserProfileView verifyEmail(Long userId, VerifyEmailOtpRequest request, String accessToken) {
+    public UserProfileView changeEmail(Long userId, ChangeEmailRequest request, String accessToken) {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
 
-        String normalizedEmail = request.email().trim().toLowerCase();
+        String normalizedNewEmail = request.getNewEmail().trim().toLowerCase();
         String currentEmail = profile.getEmail();
-        if (currentEmail == null || !currentEmail.equalsIgnoreCase(normalizedEmail)) {
-            throw new IllegalArgumentException("Email does not match the current profile email");
+        
+        // Verify the phone OTP first (cross-verification)
+        try {
+            otpProviderClient.verifyOtp(profile.getPhone(), request.getPhoneOtp());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid phone OTP: " + e.getMessage());
         }
 
-        emailOtpService.verifyOtp(userId, normalizedEmail, request.otp());
-
-        if (!normalizedEmail.equals(currentEmail)) {
-            profile.setEmail(normalizedEmail);
+        // Check if email is already in use by another user
+        if (userProfileRepository.existsByEmailAndUserIdNot(normalizedNewEmail, userId)) {
+            throw new IllegalArgumentException("Email is already in use by another account");
         }
-        profile.setEmailVerified(true);
+
+        // Update email and mark as unverified
+        profile.setEmail(normalizedNewEmail);
+        profile.setEmailVerified(false);
+        
         UserProfile updated = userProfileRepository.save(profile);
+        
+        // Send verification OTP for the new email
+        emailOtpService.sendVerificationOtp(userId, normalizedNewEmail, profile.getName());
+
+        return toView(updated, accessToken);
+    }
+
+    @Transactional
+    public UserProfileView changeMobile(Long userId, ChangeMobileRequest request, String accessToken) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
+        String newPhone = request.getNewPhone().trim();
+        
+        // Verify the email OTP first (cross-verification)
+        try {
+            emailOtpService.verifyOtp(userId, profile.getEmail(), request.getEmailOtp());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid email OTP: " + e.getMessage());
+        }
+
+        // Check if phone is already in use by another user
+        if (userProfileRepository.existsByPhoneAndUserIdNot(newPhone, userId)) {
+            throw new IllegalArgumentException("Phone number is already in use by another account");
+        }
+
+        // Update phone number
+        profile.setPhone(newPhone);
+        
+        UserProfile updated = userProfileRepository.save(profile);
+        
         return toView(updated, accessToken);
     }
 
@@ -159,19 +185,6 @@ public class ProfileService {
                 vehicleCount,
                 completedBookings,
                 activeBookings);
-    }
-
-    private PreferredLanguage resolvePreferredLanguage(Long id) {
-        if (id == null) {
-            return null;
-        }
-
-        if (id <= 0) {
-            return null;
-        }
-
-        return preferredLanguageRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Preferred language not found for id: " + id));
     }
 
     private PreferredLanguageView toLanguageView(PreferredLanguage language) {

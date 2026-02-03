@@ -1,5 +1,9 @@
 package com.dztech.auth.controller;
 
+import com.dztech.auth.dto.ChangeEmailRequest;
+import com.dztech.auth.dto.ChangeEmailResponse;
+import com.dztech.auth.dto.ChangeMobileRequest;
+import com.dztech.auth.dto.ChangeMobileResponse;
 import com.dztech.auth.dto.UpdateUserProfileRequest;
 import com.dztech.auth.dto.PreferredLanguageListResponse;
 import com.dztech.auth.dto.UpdateUserPreferredLanguagesRequest;
@@ -72,6 +76,34 @@ public class ProfileController {
         String accessToken = resolveAccessToken(authentication);
         UserProfileView verified = profileService.verifyEmail(userId, request, accessToken);
         return ResponseEntity.ok(new UserProfileUpdateResponse(true, "Email verified successfully", verified));
+    }
+
+    @PutMapping("/email/change")
+    public ResponseEntity<ChangeEmailResponse> changeEmail(
+            Authentication authentication, @RequestBody @Valid ChangeEmailRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        String accessToken = resolveAccessToken(authentication);
+        try {
+            UserProfileView updated = profileService.changeEmail(userId, request, accessToken);
+            return ResponseEntity.ok(new ChangeEmailResponse(true, "Email change request successful. Please verify the new email.", updated));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest()
+                    .body(new ChangeEmailResponse(false, ex.getMessage(), null));
+        }
+    }
+
+    @PutMapping("/phone/change")
+    public ResponseEntity<ChangeMobileResponse> changeMobile(
+            Authentication authentication, @RequestBody @Valid ChangeMobileRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        String accessToken = resolveAccessToken(authentication);
+        try {
+            UserProfileView updated = profileService.changeMobile(userId, request, accessToken);
+            return ResponseEntity.ok(new ChangeMobileResponse(true, "Phone number changed successfully.", updated));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest()
+                    .body(new ChangeMobileResponse(false, ex.getMessage(), null));
+        }
     }
 
     private String resolveAccessToken(Authentication authentication) {

@@ -1,5 +1,8 @@
 package com.dztech.auth.service;
 
+import com.dztech.auth.client.OtpProviderClient;
+import com.dztech.auth.dto.ChangeEmailRequest;
+import com.dztech.auth.dto.ChangeMobileRequest;
 import com.dztech.auth.dto.DriverDocumentView;
 import com.dztech.auth.dto.DriverFieldVerificationView;
 import com.dztech.auth.dto.DriverProfileUpdateForm;
@@ -43,6 +46,7 @@ public class DriverProfileService {
     private final DocumentStorageService documentStorageService;
     private final DriverDocumentUrlBuilder driverDocumentUrlBuilder;
     private final DocumentTokenService documentTokenService;
+    private final OtpProviderClient otpProviderClient;
 
     public DriverProfileService(
             DriverProfileRepository driverProfileRepository,
@@ -51,7 +55,8 @@ public class DriverProfileService {
             DriverFieldVerificationRepository driverFieldVerificationRepository,
             DocumentStorageService documentStorageService,
             DriverDocumentUrlBuilder driverDocumentUrlBuilder,
-            DocumentTokenService documentTokenService) {
+            DocumentTokenService documentTokenService,
+            OtpProviderClient otpProviderClient) {
         this.driverProfileRepository = driverProfileRepository;
         this.driverEmailOtpService = driverEmailOtpService;
         this.userProfileRepository = userProfileRepository;
@@ -59,6 +64,7 @@ public class DriverProfileService {
         this.documentStorageService = documentStorageService;
         this.driverDocumentUrlBuilder = driverDocumentUrlBuilder;
         this.documentTokenService = documentTokenService;
+        this.otpProviderClient = otpProviderClient;
     }
 
     @Transactional(readOnly = true)
@@ -205,6 +211,64 @@ public class DriverProfileService {
         if (emailChanged) {
             driverEmailOtpService.sendOtp(userId, updated.getEmail(), updated.getFullName());
         }
+        return toView(updated);
+    }
+
+    @Transactional
+    public DriverProfileView changeEmail(Long userId, ChangeEmailRequest request) {
+        DriverProfile profile = driverProfileRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
+
+        String normalizedNewEmail = request.newEmail().trim().toLowerCase();
+        String currentEmail = profile.getEmail();
+        
+        // Verify the phone OTP first (cross-verification)
+        try {
+            otpProviderClient.verifyOtp(profile.getPhone(), request.phoneOtp());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid phone OTP: " + e.getMessage());
+        }
+
+        // Check if email is already in use by another user
+        if (driverProfileRepository.existsByEmailAndUserIdNot(normalizedNewEmail, userId)) {
+            throw new IllegalArgumentException("Email is already in use by another account");
+        }
+
+        // Update email
+        profile.setEmail(normalizedNewEmail);
+        
+        DriverProfile updated = driverProfileRepository.save(profile);
+        
+        // Send verification OTP for the new email
+        driverEmailOtpService.sendOtp(userId, normalizedNewEmail, profile.getFullName());
+
+        return toView(updated);
+    }
+
+    @Transactional
+    public DriverProfileView changeMobile(Long userId, ChangeMobileRequest request) {
+        DriverProfile profile = driverProfileRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
+
+        String newPhone = request.newPhone().trim();
+        
+        // Verify the email OTP first (cross-verification)
+        try {
+            driverEmailOtpService.verifyOtp(userId, profile.getEmail(), request.emailOtp());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid email OTP: " + e.getMessage());
+        }
+
+        // Check if phone is already in use by another user
+        if (driverProfileRepository.existsByPhoneAndUserIdNot(newPhone, userId)) {
+            throw new IllegalArgumentException("Phone number is already in use by another account");
+        }
+
+        // Update phone number
+        profile.setPhone(newPhone);
+        
+        DriverProfile updated = driverProfileRepository.save(profile);
+        
         return toView(updated);
     }
 

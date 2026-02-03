@@ -1,5 +1,11 @@
 package com.dztech.auth.controller;
 
+import com.dztech.auth.dto.ChangeEmailRequest;
+import com.dztech.auth.dto.ChangeEmailResponse;
+import com.dztech.auth.dto.ChangeMobileRequest;
+import com.dztech.auth.dto.ChangeMobileResponse;
+import com.dztech.auth.dto.DriverChangeEmailResponse;
+import com.dztech.auth.dto.DriverChangeMobileResponse;
 import com.dztech.auth.dto.DriverEmailOtpRequest;
 import com.dztech.auth.dto.DriverEmailOtpResponse;
 import com.dztech.auth.dto.DriverEmailVerificationRequest;
@@ -94,6 +100,32 @@ public class DriverProfileController {
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest()
                     .body(new DriverProfileUpdateResponse(false, ex.getMessage(), null));
+        }
+    }
+
+    @PutMapping("/email/change")
+    public ResponseEntity<DriverChangeEmailResponse> changeEmail(
+            Authentication authentication, @RequestBody @Valid ChangeEmailRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        try {
+            DriverProfileView updated = driverProfileService.changeEmail(userId, request);
+            return ResponseEntity.ok(new DriverChangeEmailResponse(true, "Email change request successful. Please verify the new email.", updated));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest()
+                    .body(new DriverChangeEmailResponse(false, ex.getMessage(), null));
+        }
+    }
+
+    @PutMapping("/phone/change")
+    public ResponseEntity<DriverChangeMobileResponse> changeMobile(
+            Authentication authentication, @RequestBody @Valid ChangeMobileRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        try {
+            DriverProfileView updated = driverProfileService.changeMobile(userId, request);
+            return ResponseEntity.ok(new DriverChangeMobileResponse(true, "Phone number changed successfully.", updated));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest()
+                    .body(new DriverChangeMobileResponse(false, ex.getMessage(), null));
         }
     }
 }
