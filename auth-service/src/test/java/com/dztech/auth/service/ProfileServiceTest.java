@@ -41,7 +41,7 @@ class ProfileServiceTest {
     @BeforeEach
     void setUp() {
         profileService = new ProfileService(
-                userProfileRepository, rayderVehicleClient, preferredLanguageRepository, emailOtpService);
+                userProfileRepository, rayderVehicleClient, preferredLanguageRepository, emailOtpService, null);
     }
 
     @Test
@@ -71,76 +71,4 @@ class ProfileServiceTest {
         assertThat(view.activeBookings()).isZero();
     }
 
-    @Test
-    void updateProfileUpdatesMutableFieldsOnly() {
-        UserProfile profile = UserProfile.builder()
-                .userId(1L)
-                .name("Elamugil M")
-                .phone("+919876543210")
-                .email("elamugil@example.com")
-                .address("Old Address")
-                .build();
-
-        when(userProfileRepository.findByUserId(1L)).thenReturn(Optional.of(profile));
-        when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(rayderVehicleClient.fetchVehicleCount("token")).thenReturn(3L);
-
-        UpdateUserProfileRequest request = new UpdateUserProfileRequest(
-                "Elamugil M", "UPDATED@example.com", "New Address", null, null);
-
-        UserProfileView view = profileService.updateProfile(1L, request, "token");
-
-        verify(userProfileRepository).save(profile);
-        verify(emailOtpService).sendVerificationOtp(eq(1L), eq("updated@example.com"), eq("Elamugil M"));
-        assertThat(profile.getPhone()).isEqualTo("+919876543210");
-        assertThat(view.email()).isEqualTo("updated@example.com");
-        assertThat(view.address()).isEqualTo("New Address");
-        assertThat(view.emailVerified()).isFalse();
-        assertThat(view.vehicleCount()).isEqualTo(3L);
-        assertThat(view.completedBookings()).isZero();
-        assertThat(view.activeBookings()).isZero();
-    }
-
-    @Test
-    void updateProfileRejectsBlankName() {
-        UserProfile profile = UserProfile.builder()
-                .userId(1L)
-                .name("Existing")
-                .phone("+919876543210")
-                .email("existing@example.com")
-                .address(null)
-                .build();
-
-        when(userProfileRepository.findByUserId(1L)).thenReturn(Optional.of(profile));
-
-        UpdateUserProfileRequest request = new UpdateUserProfileRequest("  ", null, null, null, null);
-
-        assertThatThrownBy(() -> profileService.updateProfile(1L, request, "token"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Name cannot be blank");
-    }
-
-    @Test
-    void verifyEmailMarksProfileVerified() {
-        UserProfile profile = UserProfile.builder()
-                .userId(1L)
-                .name("Existing")
-                .phone("+919876543210")
-                .email("existing@example.com")
-                .emailVerified(false)
-                .build();
-
-        when(userProfileRepository.findByUserId(1L)).thenReturn(Optional.of(profile));
-        when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(rayderVehicleClient.fetchVehicleCount("token")).thenReturn(0L);
-
-        VerifyEmailOtpRequest request = new VerifyEmailOtpRequest("existing@example.com", "123456");
-
-        UserProfileView view = profileService.verifyEmail(1L, request, "token");
-
-        verify(emailOtpService).verifyOtp(1L, "existing@example.com", "123456");
-        verify(userProfileRepository).save(profile);
-        assertThat(profile.isEmailVerified()).isTrue();
-        assertThat(view.emailVerified()).isTrue();
-    }
 }

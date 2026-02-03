@@ -71,7 +71,7 @@ public class ProfileService {
 
         // Send OTP to current phone number for verification
         try {
-            otpProviderClient.sendOtp(profile.getPhone(), "Your OTP for email change is: {otp}");
+            otpProviderClient.sendOtp(profile.getPhone(), null);
         } catch (Exception e) {
             throw new RuntimeException("Failed to send OTP to phone: " + e.getMessage());
         }
@@ -114,12 +114,12 @@ public class ProfileService {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
 
-        String normalizedNewEmail = request.getNewEmail().trim().toLowerCase();
+        String normalizedNewEmail = request.newEmail().trim().toLowerCase();
         String currentEmail = profile.getEmail();
         
         // Verify the phone OTP first (cross-verification)
         try {
-            otpProviderClient.verifyOtp(profile.getPhone(), request.getPhoneOtp());
+            otpProviderClient.verifyOtp(profile.getPhone(), request.phoneOtp());
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid phone OTP: " + e.getMessage());
         }
@@ -146,11 +146,11 @@ public class ProfileService {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
 
-        String newPhone = request.getNewPhone().trim();
+        String newPhone = request.newPhone().trim();
         
         // Verify the email OTP first (cross-verification)
         try {
-            emailOtpService.verifyOtp(userId, profile.getEmail(), request.getEmailOtp());
+            emailOtpService.verifyOtp(userId, profile.getEmail(), request.emailOtp());
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid email OTP: " + e.getMessage());
         }

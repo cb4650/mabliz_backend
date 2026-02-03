@@ -4,6 +4,10 @@ import com.dztech.auth.dto.ChangeEmailRequest;
 import com.dztech.auth.dto.ChangeEmailResponse;
 import com.dztech.auth.dto.ChangeMobileRequest;
 import com.dztech.auth.dto.ChangeMobileResponse;
+import com.dztech.auth.dto.RequestEmailChangeOtpRequest;
+import com.dztech.auth.dto.RequestEmailChangeOtpResponse;
+import com.dztech.auth.dto.RequestMobileChangeOtpRequest;
+import com.dztech.auth.dto.RequestMobileChangeOtpResponse;
 import com.dztech.auth.dto.UpdateUserProfileRequest;
 import com.dztech.auth.dto.PreferredLanguageListResponse;
 import com.dztech.auth.dto.UpdateUserPreferredLanguagesRequest;
@@ -44,38 +48,21 @@ public class ProfileController {
         return ResponseEntity.ok(new UserProfileResponse(true, profile));
     }
 
-    @GetMapping("/preferred-languages")
-    public ResponseEntity<PreferredLanguageListResponse> listPreferredLanguages() {
-        return ResponseEntity.ok(
-                new PreferredLanguageListResponse(true, profileService.listPreferredLanguages()));
+
+    @PostMapping("/request-email-change-otp")
+    public ResponseEntity<RequestEmailChangeOtpResponse> requestEmailChangeOtp(
+            Authentication authentication, @RequestBody @Valid RequestEmailChangeOtpRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        RequestEmailChangeOtpResponse response = profileService.requestEmailChangeOtp(userId, request);
+        return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<UserProfileUpdateResponse> updateProfile(
-            Authentication authentication, @RequestBody @Valid UpdateUserProfileRequest request) {
+    @PostMapping("/request-mobile-change-otp")
+    public ResponseEntity<RequestMobileChangeOtpResponse> requestMobileChangeOtp(
+            Authentication authentication, @RequestBody @Valid RequestMobileChangeOtpRequest request) {
         Long userId = authenticatedUserProvider.getCurrentUserId();
-        String accessToken = resolveAccessToken(authentication);
-        UserProfileView updated = profileService.updateProfile(userId, request, accessToken);
-        return ResponseEntity.ok(new UserProfileUpdateResponse(true, "Profile updated successfully", updated));
-    }
-
-    @PutMapping("/preferred-languages")
-    public ResponseEntity<UserProfileUpdateResponse> updatePreferredLanguages(
-            Authentication authentication, @RequestBody @Valid UpdateUserPreferredLanguagesRequest request) {
-        Long userId = authenticatedUserProvider.getCurrentUserId();
-        String accessToken = resolveAccessToken(authentication);
-        UserProfileView updated = profileService.updatePreferredLanguages(userId, request, accessToken);
-        return ResponseEntity.ok(
-                new UserProfileUpdateResponse(true, "Preferred languages updated successfully", updated));
-    }
-
-    @PostMapping("/email/verify")
-    public ResponseEntity<UserProfileUpdateResponse> verifyEmail(
-            Authentication authentication, @RequestBody @Valid VerifyEmailOtpRequest request) {
-        Long userId = authenticatedUserProvider.getCurrentUserId();
-        String accessToken = resolveAccessToken(authentication);
-        UserProfileView verified = profileService.verifyEmail(userId, request, accessToken);
-        return ResponseEntity.ok(new UserProfileUpdateResponse(true, "Email verified successfully", verified));
+        RequestMobileChangeOtpResponse response = profileService.requestMobileChangeOtp(userId, request);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/email/change")
