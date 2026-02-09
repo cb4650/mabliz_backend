@@ -2,18 +2,11 @@ package com.dztech.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.Size;
 
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class RequestEmailChangeOtpRequest {
-
-    @NotBlank(message = "New email is required")
-    @Email(message = "New email must be valid")
-    private String newEmail;
+public record RequestEmailChangeOtpRequest(
+        @NotBlank(message = "New email is required")
+        @Email(message = "New email must be a valid email address")
+        @Size(max = 150, message = "Email must be at most 150 characters")
+        String newEmail) {
 }

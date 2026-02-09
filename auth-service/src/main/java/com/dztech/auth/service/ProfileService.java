@@ -62,7 +62,7 @@ public class ProfileService {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
 
-        String newEmail = request.getNewEmail().trim().toLowerCase();
+        String newEmail = request.newEmail().trim().toLowerCase();
         
         // Check if email is already in use by another user
         if (userProfileRepository.existsByEmailAndUserIdNot(newEmail, userId)) {
@@ -88,7 +88,7 @@ public class ProfileService {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
 
-        String newPhone = request.getNewPhone().trim();
+        String newPhone = request.newPhone().trim();
         
         // Check if phone is already in use by another user
         if (userProfileRepository.existsByPhoneAndUserIdNot(newPhone, userId)) {

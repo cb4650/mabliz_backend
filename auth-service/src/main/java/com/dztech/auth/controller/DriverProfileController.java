@@ -4,6 +4,8 @@ import com.dztech.auth.dto.ChangeEmailRequest;
 import com.dztech.auth.dto.ChangeEmailResponse;
 import com.dztech.auth.dto.ChangeMobileRequest;
 import com.dztech.auth.dto.ChangeMobileResponse;
+import com.dztech.auth.dto.RequestEmailChangeOtpRequest;
+import com.dztech.auth.dto.RequestMobileChangeOtpRequest;
 import com.dztech.auth.dto.DriverChangeEmailResponse;
 import com.dztech.auth.dto.DriverChangeMobileResponse;
 import com.dztech.auth.dto.DriverEmailOtpRequest;
@@ -105,10 +107,10 @@ public class DriverProfileController {
 
     @PostMapping("/request-email-change-otp")
     public ResponseEntity<DriverChangeEmailResponse> requestEmailChangeOtp(
-            Authentication authentication, @RequestBody @Valid ChangeEmailRequest request) {
+            Authentication authentication, @RequestBody @Valid RequestEmailChangeOtpRequest request) {
         Long userId = authenticatedUserProvider.getCurrentUserId();
         try {
-            DriverProfileView profile = driverProfileService.requestEmailChangeOtp(userId, request.newEmail());
+            DriverProfileView profile = driverProfileService.requestEmailChangeOtp(userId, request);
             return ResponseEntity.ok(new DriverChangeEmailResponse(true, "OTP sent to your current phone number for email change verification", profile));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest()
@@ -118,10 +120,10 @@ public class DriverProfileController {
 
     @PostMapping("/request-mobile-change-otp")
     public ResponseEntity<DriverChangeMobileResponse> requestMobileChangeOtp(
-            Authentication authentication, @RequestBody @Valid ChangeMobileRequest request) {
+            Authentication authentication, @RequestBody @Valid RequestMobileChangeOtpRequest request) {
         Long userId = authenticatedUserProvider.getCurrentUserId();
         try {
-            DriverProfileView profile = driverProfileService.requestMobileChangeOtp(userId, request.newPhone());
+            DriverProfileView profile = driverProfileService.requestMobileChangeOtp(userId, request);
             return ResponseEntity.ok(new DriverChangeMobileResponse(true, "OTP sent to your current email for mobile change verification", profile));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest()

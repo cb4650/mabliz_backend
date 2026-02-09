@@ -3,6 +3,8 @@ package com.dztech.auth.service;
 import com.dztech.auth.client.OtpProviderClient;
 import com.dztech.auth.dto.ChangeEmailRequest;
 import com.dztech.auth.dto.ChangeMobileRequest;
+import com.dztech.auth.dto.RequestEmailChangeOtpRequest;
+import com.dztech.auth.dto.RequestMobileChangeOtpRequest;
 import com.dztech.auth.dto.DriverDocumentView;
 import com.dztech.auth.dto.DriverFieldVerificationView;
 import com.dztech.auth.dto.DriverProfileUpdateForm;
@@ -273,11 +275,11 @@ public class DriverProfileService {
     }
 
     @Transactional
-    public DriverProfileView requestEmailChangeOtp(Long userId, String newEmail) {
+    public DriverProfileView requestEmailChangeOtp(Long userId, RequestEmailChangeOtpRequest request) {
         DriverProfile profile = driverProfileRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
 
-        String normalizedNewEmail = newEmail.trim().toLowerCase();
+        String normalizedNewEmail = request.newEmail().trim().toLowerCase();
         
         // Check if email is already in use by another user
         if (driverProfileRepository.existsByEmailAndUserIdNot(normalizedNewEmail, userId)) {
@@ -295,11 +297,11 @@ public class DriverProfileService {
     }
 
     @Transactional
-    public DriverProfileView requestMobileChangeOtp(Long userId, String newPhone) {
+    public DriverProfileView requestMobileChangeOtp(Long userId, RequestMobileChangeOtpRequest request) {
         DriverProfile profile = driverProfileRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
 
-        String normalizedNewPhone = newPhone.trim();
+        String normalizedNewPhone = request.newPhone().trim();
         
         // Check if phone is already in use by another user
         if (driverProfileRepository.existsByPhoneAndUserIdNot(normalizedNewPhone, userId)) {
