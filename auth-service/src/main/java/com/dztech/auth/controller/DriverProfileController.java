@@ -103,12 +103,51 @@ public class DriverProfileController {
         }
     }
 
-    @PutMapping("/email/change")
-    public ResponseEntity<DriverChangeEmailResponse> changeEmail(
+    @PostMapping("/request-email-change-otp")
+    public ResponseEntity<DriverChangeEmailResponse> requestEmailChangeOtp(
             Authentication authentication, @RequestBody @Valid ChangeEmailRequest request) {
         Long userId = authenticatedUserProvider.getCurrentUserId();
         try {
-            DriverProfileView updated = driverProfileService.changeEmail(userId, request);
+            DriverProfileView profile = driverProfileService.requestEmailChangeOtp(userId, request.newEmail());
+            return ResponseEntity.ok(new DriverChangeEmailResponse(true, "OTP sent to your current phone number for email change verification", profile));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest()
+                    .body(new DriverChangeEmailResponse(false, ex.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/request-mobile-change-otp")
+    public ResponseEntity<DriverChangeMobileResponse> requestMobileChangeOtp(
+            Authentication authentication, @RequestBody @Valid ChangeMobileRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        try {
+            DriverProfileView profile = driverProfileService.requestMobileChangeOtp(userId, request.newPhone());
+            return ResponseEntity.ok(new DriverChangeMobileResponse(true, "OTP sent to your current email for mobile change verification", profile));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest()
+                    .body(new DriverChangeMobileResponse(false, ex.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/verify-mobile")
+    public ResponseEntity<DriverChangeMobileResponse> verifyAndChangeMobile(
+            Authentication authentication, @RequestBody @Valid ChangeMobileRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        try {
+            DriverProfileView updated = driverProfileService.verifyAndChangeMobile(userId, request);
+            return ResponseEntity.ok(new DriverChangeMobileResponse(true, "Phone number changed successfully.", updated));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest()
+                    .body(new DriverChangeMobileResponse(false, ex.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<DriverChangeEmailResponse> verifyAndChangeEmail(
+            Authentication authentication, @RequestBody @Valid ChangeEmailRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        try {
+            DriverProfileView updated = driverProfileService.verifyAndChangeEmail(userId, request);
             return ResponseEntity.ok(new DriverChangeEmailResponse(true, "Email change request successful. Please verify the new email.", updated));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest()
@@ -116,16 +155,4 @@ public class DriverProfileController {
         }
     }
 
-    @PutMapping("/phone/change")
-    public ResponseEntity<DriverChangeMobileResponse> changeMobile(
-            Authentication authentication, @RequestBody @Valid ChangeMobileRequest request) {
-        Long userId = authenticatedUserProvider.getCurrentUserId();
-        try {
-            DriverProfileView updated = driverProfileService.changeMobile(userId, request);
-            return ResponseEntity.ok(new DriverChangeMobileResponse(true, "Phone number changed successfully.", updated));
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest()
-                    .body(new DriverChangeMobileResponse(false, ex.getMessage(), null));
-        }
-    }
 }

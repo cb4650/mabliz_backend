@@ -4,6 +4,7 @@ import com.dztech.auth.dto.ChangeEmailRequest;
 import com.dztech.auth.dto.ChangeEmailResponse;
 import com.dztech.auth.dto.ChangeMobileRequest;
 import com.dztech.auth.dto.ChangeMobileResponse;
+import com.dztech.auth.dto.UserProfileResponse;
 import com.dztech.auth.dto.UserProfileView;
 import com.dztech.auth.service.ProfileService;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ class ProfileControllerTest {
     private ProfileController profileController;
 
     @Test
-    void testChangeEmail_Success() {
+    void testVerifyAndChangeEmail_Success() {
         // Arrange
         Long userId = 1L;
         String newEmail = "newemail@example.com";
@@ -42,25 +43,24 @@ class ProfileControllerTest {
 
         ChangeEmailRequest request = new ChangeEmailRequest(newEmail, phoneOtp);
 
-        when(profileService.changeEmail(eq(userId), any(ChangeEmailRequest.class), eq(accessToken)))
+        when(profileService.verifyAndChangeEmail(eq(userId), any(ChangeEmailRequest.class), eq(accessToken)))
                 .thenReturn(updatedProfile);
 
         // Act
-        ResponseEntity<ChangeEmailResponse> response = profileController.changeEmail(
+        ResponseEntity<UserProfileResponse> response = profileController.verifyAndChangeEmail(
                 mock(Authentication.class), request);
 
         // Assert
         assertNotNull(response);
         assertEquals(200, response.getStatusCodeValue());
-        ChangeEmailResponse responseBody = response.getBody();
+        UserProfileResponse responseBody = response.getBody();
         assertNotNull(responseBody);
         assertTrue(responseBody.success());
-        assertEquals("Email change request successful. Please verify the new email.", responseBody.message());
-        assertEquals(updatedProfile, responseBody.profile());
+        assertEquals(updatedProfile, responseBody.data());
     }
 
     @Test
-    void testChangeEmail_InvalidOtp() {
+    void testVerifyAndChangeEmail_InvalidOtp() {
         // Arrange
         Long userId = 1L;
         String newEmail = "newemail@example.com";
@@ -69,25 +69,24 @@ class ProfileControllerTest {
 
         ChangeEmailRequest request = new ChangeEmailRequest(newEmail, phoneOtp);
 
-        when(profileService.changeEmail(eq(userId), any(ChangeEmailRequest.class), eq(accessToken)))
+        when(profileService.verifyAndChangeEmail(eq(userId), any(ChangeEmailRequest.class), eq(accessToken)))
                 .thenThrow(new IllegalArgumentException("Invalid phone OTP"));
 
         // Act
-        ResponseEntity<ChangeEmailResponse> response = profileController.changeEmail(
+        ResponseEntity<UserProfileResponse> response = profileController.verifyAndChangeEmail(
                 mock(Authentication.class), request);
 
         // Assert
         assertNotNull(response);
         assertEquals(400, response.getStatusCodeValue());
-        ChangeEmailResponse responseBody = response.getBody();
+        UserProfileResponse responseBody = response.getBody();
         assertNotNull(responseBody);
         assertFalse(responseBody.success());
-        assertEquals("Invalid phone OTP", responseBody.message());
-        assertNull(responseBody.profile());
+        assertNull(responseBody.data());
     }
 
     @Test
-    void testChangeMobile_Success() {
+    void testVerifyAndChangeMobile_Success() {
         // Arrange
         Long userId = 1L;
         String newPhone = "1234567890";
@@ -100,20 +99,19 @@ class ProfileControllerTest {
 
         ChangeMobileRequest request = new ChangeMobileRequest(newPhone, emailOtp);
 
-        when(profileService.changeMobile(eq(userId), any(ChangeMobileRequest.class), eq(accessToken)))
+        when(profileService.verifyAndChangeMobile(eq(userId), any(ChangeMobileRequest.class), eq(accessToken)))
                 .thenReturn(updatedProfile);
 
         // Act
-        ResponseEntity<ChangeMobileResponse> response = profileController.changeMobile(
+        ResponseEntity<UserProfileResponse> response = profileController.verifyAndChangeMobile(
                 mock(Authentication.class), request);
 
         // Assert
         assertNotNull(response);
         assertEquals(200, response.getStatusCodeValue());
-        ChangeMobileResponse responseBody = response.getBody();
+        UserProfileResponse responseBody = response.getBody();
         assertNotNull(responseBody);
         assertTrue(responseBody.success());
-        assertEquals("Phone number changed successfully.", responseBody.message());
-        assertEquals(updatedProfile, responseBody.profile());
+        assertEquals(updatedProfile, responseBody.data());
     }
 }

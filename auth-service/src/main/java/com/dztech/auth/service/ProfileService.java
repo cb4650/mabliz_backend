@@ -168,6 +168,65 @@ public class ProfileService {
         return toView(updated, accessToken);
     }
 
+    @Transactional
+    public UserProfileView verifyAndChangeMobile(Long userId, ChangeMobileRequest request, String accessToken) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
+        String newPhone = request.newPhone().trim();
+        
+        // Verify the email OTP first (cross-verification)
+        try {
+            emailOtpService.verifyOtp(userId, profile.getEmail(), request.emailOtp());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid email OTP: " + e.getMessage());
+        }
+
+        // Check if phone is already in use by another user
+        if (userProfileRepository.existsByPhoneAndUserIdNot(newPhone, userId)) {
+            throw new IllegalArgumentException("Phone number is already in use by another account");
+        }
+
+        // Update phone number
+        profile.setPhone(newPhone);
+        
+        UserProfile updated = userProfileRepository.save(profile);
+        
+        return toView(updated, accessToken);
+    }
+
+    @Transactional
+    public UserProfileView verifyAndChangeEmail(Long userId, ChangeEmailRequest request, String accessToken) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
+        String normalizedNewEmail = request.newEmail().trim().toLowerCase();
+        String currentEmail = profile.getEmail();
+        
+        // Verify the phone OTP first (cross-verification)
+        try {
+            otpProviderClient.verifyOtp(profile.getPhone(), request.phoneOtp());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid phone OTP: " + e.getMessage());
+        }
+
+        // Check if email is already in use by another user
+        if (userProfileRepository.existsByEmailAndUserIdNot(normalizedNewEmail, userId)) {
+            throw new IllegalArgumentException("Email is already in use by another account");
+        }
+
+        // Update email and mark as unverified
+        profile.setEmail(normalizedNewEmail);
+        profile.setEmailVerified(false);
+        
+        UserProfile updated = userProfileRepository.save(profile);
+        
+        // Send verification OTP for the new email
+        emailOtpService.sendVerificationOtp(userId, normalizedNewEmail, profile.getName());
+
+        return toView(updated, accessToken);
+    }
+
     private UserProfileView toView(UserProfile profile, String accessToken) {
         long vehicleCount = rayderVehicleClient.fetchVehicleCount(accessToken);
         long completedBookings = 0L;

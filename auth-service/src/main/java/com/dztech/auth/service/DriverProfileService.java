@@ -272,6 +272,108 @@ public class DriverProfileService {
         return toView(updated);
     }
 
+    @Transactional
+    public DriverProfileView requestEmailChangeOtp(Long userId, String newEmail) {
+        DriverProfile profile = driverProfileRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
+
+        String normalizedNewEmail = newEmail.trim().toLowerCase();
+        
+        // Check if email is already in use by another user
+        if (driverProfileRepository.existsByEmailAndUserIdNot(normalizedNewEmail, userId)) {
+            throw new IllegalArgumentException("Email is already in use by another account");
+        }
+
+        // Send OTP to current phone number for verification
+        try {
+            otpProviderClient.sendOtp(profile.getPhone(), null);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send OTP to phone: " + e.getMessage());
+        }
+
+        return toView(profile);
+    }
+
+    @Transactional
+    public DriverProfileView requestMobileChangeOtp(Long userId, String newPhone) {
+        DriverProfile profile = driverProfileRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
+
+        String normalizedNewPhone = newPhone.trim();
+        
+        // Check if phone is already in use by another user
+        if (driverProfileRepository.existsByPhoneAndUserIdNot(normalizedNewPhone, userId)) {
+            throw new IllegalArgumentException("Phone number is already in use by another account");
+        }
+
+        // Send OTP to current email for verification
+        try {
+            driverEmailOtpService.sendOtp(userId, profile.getEmail(), profile.getFullName());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send OTP to email: " + e.getMessage());
+        }
+
+        return toView(profile);
+    }
+
+    @Transactional
+    public DriverProfileView verifyAndChangeEmail(Long userId, ChangeEmailRequest request) {
+        DriverProfile profile = driverProfileRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
+
+        String normalizedNewEmail = request.newEmail().trim().toLowerCase();
+        String currentEmail = profile.getEmail();
+        
+        // Verify the phone OTP first (cross-verification)
+        try {
+            otpProviderClient.verifyOtp(profile.getPhone(), request.phoneOtp());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid phone OTP: " + e.getMessage());
+        }
+
+        // Check if email is already in use by another user
+        if (driverProfileRepository.existsByEmailAndUserIdNot(normalizedNewEmail, userId)) {
+            throw new IllegalArgumentException("Email is already in use by another account");
+        }
+
+        // Update email
+        profile.setEmail(normalizedNewEmail);
+        
+        DriverProfile updated = driverProfileRepository.save(profile);
+        
+        // Send verification OTP for the new email
+        driverEmailOtpService.sendOtp(userId, normalizedNewEmail, profile.getFullName());
+
+        return toView(updated);
+    }
+
+    @Transactional
+    public DriverProfileView verifyAndChangeMobile(Long userId, ChangeMobileRequest request) {
+        DriverProfile profile = driverProfileRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Driver profile not found"));
+
+        String newPhone = request.newPhone().trim();
+        
+        // Verify the email OTP first (cross-verification)
+        try {
+            driverEmailOtpService.verifyOtp(userId, profile.getEmail(), request.emailOtp());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid email OTP: " + e.getMessage());
+        }
+
+        // Check if phone is already in use by another user
+        if (driverProfileRepository.existsByPhoneAndUserIdNot(newPhone, userId)) {
+            throw new IllegalArgumentException("Phone number is already in use by another account");
+        }
+
+        // Update phone number
+        profile.setPhone(newPhone);
+        
+        DriverProfile updated = driverProfileRepository.save(profile);
+        
+        return toView(updated);
+    }
+
     private DocumentUpload uploadProfileDocument(Long userId, MultipartFile file, String label) {
         String contentType = validateImage(file, label);
         String objectName = DocumentPathBuilder.profileDocument(userId, label);
