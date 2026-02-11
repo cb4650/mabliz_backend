@@ -59,25 +59,32 @@ public class DriverRegistrationService {
                 });
 
         // Update profile with additional fields if provided
-        driverProfileRepository.findById(userId).ifPresent(profile -> {
-            boolean updated = false;
-            if (StringUtils.hasText(request.gender()) && !StringUtils.hasText(profile.getGender())) {
-                profile.setGender(request.gender());
-                updated = true;
-            }
-            if (StringUtils.hasText(request.dob()) && !StringUtils.hasText(profile.getDob())) {
-                profile.setDob(request.dob());
-                updated = true;
-            }
-            if (request.languages() != null && !request.languages().isEmpty() &&
-                (profile.getLanguages() == null || profile.getLanguages().isEmpty())) {
-                profile.setLanguages(request.languages());
-                updated = true;
-            }
-            if (updated) {
-                driverProfileRepository.save(profile);
-            }
-        });
+        DriverProfile profile = driverProfileRepository.findById(userId)
+                .orElseGet(() -> createDriverProfile(userId, request.name(), normalizedEmail));
+        
+        boolean updated = false;
+        if (StringUtils.hasText(request.gender()) && !StringUtils.hasText(profile.getGender())) {
+            profile.setGender(request.gender());
+            updated = true;
+        }
+        if (StringUtils.hasText(request.dob()) && !StringUtils.hasText(profile.getDob())) {
+            profile.setDob(request.dob());
+            updated = true;
+        }
+        if (request.languages() != null && !request.languages().isEmpty() &&
+            (profile.getLanguages() == null || profile.getLanguages().isEmpty())) {
+            profile.setLanguages(request.languages());
+            updated = true;
+        }
+        // Allow Mother Tongue to be updated even if already set
+        if (StringUtils.hasText(request.motherTongue())) {
+            profile.setMotherTongue(request.motherTongue());
+            updated = true;
+        }
+        
+        if (updated) {
+            profile = driverProfileRepository.save(profile);
+        }
 
         driverEmailOtpService.sendOtp(userId, normalizedEmail, request.name());
         long expiresIn = driverEmailOtpService.getExpirySeconds();

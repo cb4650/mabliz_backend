@@ -57,7 +57,7 @@ class DriverRegistrationServiceTest {
     @Test
     void requestEmailOtpSendsOtpWhenEmailNotRegistered() {
         Long userId = 5L;
-        DriverEmailOtpRequest request = new DriverEmailOtpRequest("Mugil", "mugil@example.com", null, null, null);
+        DriverEmailOtpRequest request = new DriverEmailOtpRequest("Mugil", "mugil@example.com", null, null, null, null);
         when(driverProfileRepository.findByEmail("mugil@example.com")).thenReturn(Optional.empty());
         when(userRepository.findByEmail("mugil@example.com")).thenReturn(Optional.empty());
         when(driverEmailOtpService.getExpirySeconds()).thenReturn(300L);
@@ -72,7 +72,7 @@ class DriverRegistrationServiceTest {
     @Test
     void requestEmailOtpRejectsAlreadyRegisteredEmail() {
         Long userId = 5L;
-        DriverEmailOtpRequest request = new DriverEmailOtpRequest("Mugil", "mugil@example.com", null, null, null);
+        DriverEmailOtpRequest request = new DriverEmailOtpRequest("Mugil", "mugil@example.com", null, null, null, null);
         when(driverProfileRepository.findByEmail("mugil@example.com"))
                 .thenReturn(Optional.of(
                         DriverProfile.builder().userId(1L).status(DriverProfileStatus.PENDING).build()));

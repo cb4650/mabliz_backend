@@ -20,5 +20,8 @@ public record DriverEmailOtpRequest(
 
         String dob,
 
-        List<String> languages) {
+        List<String> languages,
+
+        @Size(max = 50, message = "Mother tongue must be at most 50 characters")
+        String motherTongue) {
 }
