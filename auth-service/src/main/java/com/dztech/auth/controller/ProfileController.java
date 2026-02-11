@@ -52,6 +52,12 @@ public class ProfileController {
         return ResponseEntity.ok(new UserProfileResponse(true, profile));
     }
 
+    @GetMapping("/preferred-languages")
+    public ResponseEntity<PreferredLanguageListResponse> getPreferredLanguages() {
+        PreferredLanguageListResponse response = profileService.getPreferredLanguages();
+        return ResponseEntity.ok(response);
+    }
+
 
     @PostMapping("/request-email-change-otp")
     public ResponseEntity<RequestEmailChangeOtpResponse> requestEmailChangeOtp(

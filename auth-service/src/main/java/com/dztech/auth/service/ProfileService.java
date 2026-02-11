@@ -10,6 +10,7 @@ import com.dztech.auth.dto.CustomerEmailOtpRequest;
 import com.dztech.auth.dto.CustomerEmailOtpResponse;
 import com.dztech.auth.dto.CustomerEmailVerificationRequest;
 import com.dztech.auth.dto.CustomerEmailVerificationResponse;
+import com.dztech.auth.dto.PreferredLanguageListResponse;
 import com.dztech.auth.dto.PreferredLanguageView;
 import com.dztech.auth.dto.RequestEmailChangeOtpRequest;
 import com.dztech.auth.dto.RequestEmailChangeOtpResponse;
@@ -320,6 +321,17 @@ public class ProfileService {
             return null;
         }
         return new PreferredLanguageView(language.getId(), language.getCode(), language.getName());
+    }
+
+    @Transactional(readOnly = true)
+    public PreferredLanguageListResponse getPreferredLanguages() {
+        List<PreferredLanguage> languages = preferredLanguageRepository.findAll(Sort.by(Sort.Direction.ASC, "name"));
+        
+        List<PreferredLanguageView> languageViews = languages.stream()
+                .map(language -> new PreferredLanguageView(language.getId(), language.getCode(), language.getName()))
+                .collect(Collectors.toList());
+        
+        return new PreferredLanguageListResponse(true, languageViews);
     }
 
     @Transactional
