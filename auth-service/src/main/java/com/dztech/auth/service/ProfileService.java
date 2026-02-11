@@ -6,6 +6,10 @@ import com.dztech.auth.dto.ChangeEmailRequest;
 import com.dztech.auth.dto.ChangeEmailResponse;
 import com.dztech.auth.dto.ChangeMobileRequest;
 import com.dztech.auth.dto.ChangeMobileResponse;
+import com.dztech.auth.dto.CustomerEmailOtpRequest;
+import com.dztech.auth.dto.CustomerEmailOtpResponse;
+import com.dztech.auth.dto.CustomerEmailVerificationRequest;
+import com.dztech.auth.dto.CustomerEmailVerificationResponse;
 import com.dztech.auth.dto.PreferredLanguageView;
 import com.dztech.auth.dto.RequestEmailChangeOtpRequest;
 import com.dztech.auth.dto.RequestEmailChangeOtpResponse;
@@ -107,6 +111,71 @@ public class ProfileService {
                 .message("OTP sent to your current email for mobile change verification")
                 .newPhone(newPhone)
                 .build();
+    }
+
+    @Transactional
+    public CustomerEmailOtpResponse requestEmailOtp(Long userId, CustomerEmailOtpRequest request) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
+        String email = request.email().trim().toLowerCase();
+        String name = request.name().trim();
+        
+        // Validate name length
+        if (name.length() > 150) {
+            throw new IllegalArgumentException("Name must be at most 150 characters");
+        }
+        
+        // Update name if it's different from current profile name
+        if (!name.equals(profile.getName())) {
+            profile.setName(name);
+        }
+        
+        // Check if email is already in use by another user
+        if (userProfileRepository.existsByEmailAndUserIdNot(email, userId)) {
+            throw new IllegalArgumentException("Email is already in use by another account");
+        }
+
+        // Send OTP to email for verification
+        try {
+            emailOtpService.sendVerificationOtp(userId, email, profile.getName());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send OTP to email: " + e.getMessage());
+        }
+
+        return new CustomerEmailOtpResponse(
+                true,
+                "OTP sent to email successfully",
+                new CustomerEmailOtpResponse.Data(email, 300));
+    }
+
+    @Transactional
+    public CustomerEmailVerificationResponse verifyEmailOtp(Long userId, CustomerEmailVerificationRequest request) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
+        String email = request.email().trim().toLowerCase();
+        String otp = request.otp();
+        
+        // Verify the OTP
+        try {
+            emailOtpService.verifyOtp(userId, email, otp);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid email OTP: " + e.getMessage());
+        }
+
+        // Update email and mark as verified
+        profile.setEmail(email);
+        profile.setEmailVerified(true);
+        
+        UserProfile updated = userProfileRepository.save(profile);
+        
+        return new CustomerEmailVerificationResponse(
+                true,
+                "Email verified successfully",
+                new CustomerEmailVerificationResponse.Data(
+                        new CustomerEmailVerificationResponse.User(updated.getName(), updated.getEmail()), 
+                        null));
     }
 
     @Transactional
@@ -251,5 +320,26 @@ public class ProfileService {
             return null;
         }
         return new PreferredLanguageView(language.getId(), language.getCode(), language.getName());
+    }
+
+    @Transactional
+    public UserProfileView updatePreferredLanguages(Long userId, UpdateUserPreferredLanguagesRequest request) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
+        // Validate preferred languages exist
+        PreferredLanguage primaryLanguage = preferredLanguageRepository.findById(request.primaryPreferredLanguageId())
+                .orElseThrow(() -> new IllegalArgumentException("Primary preferred language not found"));
+        
+        PreferredLanguage secondaryLanguage = preferredLanguageRepository.findById(request.secondaryPreferredLanguageId())
+                .orElseThrow(() -> new IllegalArgumentException("Secondary preferred language not found"));
+
+        // Update preferred languages
+        profile.setPrimaryPreferredLanguage(primaryLanguage);
+        profile.setSecondaryPreferredLanguage(secondaryLanguage);
+        
+        UserProfile updated = userProfileRepository.save(profile);
+        
+        return toView(updated, null); // accessToken not needed for preferred languages
     }
 }

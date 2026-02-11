@@ -4,6 +4,10 @@ import com.dztech.auth.dto.ChangeEmailRequest;
 import com.dztech.auth.dto.ChangeEmailResponse;
 import com.dztech.auth.dto.ChangeMobileRequest;
 import com.dztech.auth.dto.ChangeMobileResponse;
+import com.dztech.auth.dto.CustomerEmailOtpRequest;
+import com.dztech.auth.dto.CustomerEmailOtpResponse;
+import com.dztech.auth.dto.CustomerEmailVerificationRequest;
+import com.dztech.auth.dto.CustomerEmailVerificationResponse;
 import com.dztech.auth.dto.RequestEmailChangeOtpRequest;
 import com.dztech.auth.dto.RequestEmailChangeOtpResponse;
 import com.dztech.auth.dto.RequestMobileChangeOtpRequest;
@@ -81,6 +85,30 @@ public class ProfileController {
         String accessToken = resolveAccessToken(authentication);
         UserProfileView updatedProfile = profileService.verifyAndChangeEmail(userId, request, accessToken);
         return ResponseEntity.ok(new UserProfileResponse(true, updatedProfile));
+    }
+
+    @PostMapping("/email/otp")
+    public ResponseEntity<CustomerEmailOtpResponse> requestEmailOtp(
+            Authentication authentication, @RequestBody @Valid CustomerEmailOtpRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        CustomerEmailOtpResponse response = profileService.requestEmailOtp(userId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/email/verify")
+    public ResponseEntity<CustomerEmailVerificationResponse> verifyEmailOtp(
+            Authentication authentication, @RequestBody @Valid CustomerEmailVerificationRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        CustomerEmailVerificationResponse response = profileService.verifyEmailOtp(userId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/preferred-languages")
+    public ResponseEntity<UserProfileUpdateResponse> updatePreferredLanguages(
+            Authentication authentication, @RequestBody @Valid UpdateUserPreferredLanguagesRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        UserProfileView updatedProfile = profileService.updatePreferredLanguages(userId, request);
+        return ResponseEntity.ok(new UserProfileUpdateResponse(true, "Preferred languages updated successfully", updatedProfile));
     }
 
     private String resolveAccessToken(Authentication authentication) {
