@@ -123,4 +123,14 @@ public class ProfileController {
         }
         return null;
     }
+
+
+    @PutMapping("/update")
+    public ResponseEntity<UserProfileUpdateResponse> updateProfile(
+            Authentication authentication, @RequestBody @Valid UpdateUserProfileRequest request) {
+        Long userId = authenticatedUserProvider.getCurrentUserId();
+        String accessToken = resolveAccessToken(authentication);
+        UserProfileView updated = profileService.updateProfile(userId, request, accessToken);
+        return ResponseEntity.ok(new UserProfileUpdateResponse(true, "Profile updated successfully", updated));
+    }
 }
