@@ -354,4 +354,57 @@ public class ProfileService {
         
         return toView(updated, null); // accessToken not needed for preferred languages
     }
+
+
+    @Transactional
+    public UserProfileView updateProfile(Long userId, UpdateUserProfileRequest request, String accessToken) {
+        UserProfile profile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found"));
+
+        if (request.name() != null) {
+            String name = request.name().trim();
+            if (name.isEmpty()) {
+                throw new IllegalArgumentException("Name cannot be blank");
+            }
+            profile.setName(name);
+        }
+
+        boolean emailChanged = false;
+        if (request.email() != null) {
+            String email = request.email().trim();
+            if (email.isEmpty()) {
+                throw new IllegalArgumentException("Email cannot be blank");
+            }
+            String normalizedEmail = email.toLowerCase();
+            String currentEmail = profile.getEmail();
+            if (currentEmail == null || !currentEmail.equalsIgnoreCase(normalizedEmail)) {
+                profile.setEmail(normalizedEmail);
+                profile.setEmailVerified(false);
+                emailChanged = true;
+            }
+        }
+
+        if (request.address() != null) {
+            String address = request.address().trim();
+            profile.setAddress(StringUtils.hasText(address) ? address : null);
+        }
+
+        if (request.primaryPreferredLanguageId() != null) {
+            profile.setPrimaryPreferredLanguage(resolvePreferredLanguage(request.primaryPreferredLanguageId()));
+        }
+
+        if (request.secondaryPreferredLanguageId() != null) {
+            profile.setSecondaryPreferredLanguage(resolvePreferredLanguage(request.secondaryPreferredLanguageId()));
+        }
+
+        UserProfile updated = userProfileRepository.save(profile);
+
+        if (emailChanged) {
+            emailOtpService.sendVerificationOtp(
+                    userId, updated.getEmail(), updated.getName());
+        }
+
+        return toView(updated, accessToken);
+    }
+
 }
