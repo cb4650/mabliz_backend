@@ -390,21 +390,24 @@ public class ProfileService {
         }
 
         if (request.primaryPreferredLanguageId() != null) {
-            profile.setPrimaryPreferredLanguage(resolvePreferredLanguage(request.primaryPreferredLanguageId()));
+            Long primaryLangId = request.primaryPreferredLanguageId();
+            profile.setPrimaryPreferredLanguage(resolvePreferredLanguage(primaryLangId));
         }
 
         if (request.secondaryPreferredLanguageId() != null) {
-            profile.setSecondaryPreferredLanguage(resolvePreferredLanguage(request.secondaryPreferredLanguageId()));
+            Long secondaryLangId = request.secondaryPreferredLanguageId();
+            profile.setSecondaryPreferredLanguage(resolvePreferredLanguage(secondaryLangId));
         }
 
-        UserProfile updated = userProfileRepository.save(profile);
+        UserProfile savedProfile = userProfileRepository.save(profile);
 
         if (emailChanged) {
-            emailOtpService.sendVerificationOtp(
-                    userId, updated.getEmail(), updated.getName());
+            String emailToSend = request.email().trim().toLowerCase();
+            String nameToSend = request.name() != null ? request.name().trim() : savedProfile.getName();
+            emailOtpService.sendVerificationOtp(userId, emailToSend, nameToSend);
         }
 
-        return toView(updated, accessToken);
+        return toView(savedProfile, accessToken);
     }
 
     private PreferredLanguage resolvePreferredLanguage(Long id) {
