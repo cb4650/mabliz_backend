@@ -407,4 +407,17 @@ public class ProfileService {
         return toView(updated, accessToken);
     }
 
+    private PreferredLanguage resolvePreferredLanguage(Long id) {
+        if (id == null) {
+            return null;
+        }
+
+        if (id <= 0) {
+            return null;
+        }
+
+        return preferredLanguageRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Preferred language not found for id: " + id));
+    }
+
 }
