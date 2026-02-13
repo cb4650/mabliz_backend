@@ -46,7 +46,7 @@ public class Vehicle {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "ownership_type", nullable = false, length = 30)
+    @Column(name = "ownership_type", nullable = true, length = 30)
     private VehicleOwnershipType ownershipType;
 
     @Enumerated(EnumType.STRING)

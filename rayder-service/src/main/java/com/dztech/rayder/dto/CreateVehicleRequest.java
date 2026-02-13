@@ -20,7 +20,6 @@ public record CreateVehicleRequest(
         @Positive(message = "Model must be a positive id")
         Long modelId,
 
-        @NotNull(message = "Ownership type is required")
         VehicleOwnershipType ownershipType,
 
         @NotNull(message = "Transmission is required")

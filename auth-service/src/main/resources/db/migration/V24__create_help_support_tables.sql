@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS help_category (
     app_id VARCHAR(10) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT chk_app_id CHECK (app_id IN ('rydd', 'rydc')),
-    CONSTRAINT chk_category_key CHECK (category_key IN ('trip', 'driver', 'payment'))
+    CONSTRAINT chk_help_category_app_id CHECK (app_id IN ('rydd', 'rydc')),
+    CONSTRAINT chk_help_category_key CHECK (category_key IN ('trip', 'driver', 'payment'))
 );
 
 CREATE TABLE IF NOT EXISTS help_item (
