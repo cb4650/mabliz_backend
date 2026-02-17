@@ -10,7 +10,6 @@ public record OtpVerificationRequest(
         MultipartFile carImage4,
         MultipartFile carImage5,
         MultipartFile carImage6,
-        MultipartFile selfieImage,
         String vehicleNo,
         String insuranceNo,
         LocalDate insuranceExpiry,

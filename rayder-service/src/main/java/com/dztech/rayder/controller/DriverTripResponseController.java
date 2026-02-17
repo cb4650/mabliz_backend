@@ -7,6 +7,8 @@ import com.dztech.rayder.dto.DriverTripDepartureResponse;
 import com.dztech.rayder.dto.DriverTripDetailResponse;
 import com.dztech.rayder.dto.DriverTripListResponse;
 import com.dztech.rayder.dto.DriverDepartureRequest;
+import com.dztech.rayder.dto.DriverReachedRequest;
+import com.dztech.rayder.dto.DriverReachedResponse;
 import com.dztech.rayder.dto.OtpVerificationRequest;
 import com.dztech.rayder.dto.OtpVerificationResponse;
 import com.dztech.rayder.dto.VehicleCompletionResponse;
@@ -96,6 +98,14 @@ public class DriverTripResponseController {
             @PathVariable Long bookingId, @ModelAttribute @Valid OtpVerificationRequest request) {
         Long driverId = authenticatedUserProvider.getCurrentUserId();
         OtpVerificationResponse response = driverTripResponseService.verifyOtpForDriver(driverId, bookingId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/{bookingId}/mark-reached", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DriverReachedResponse> markReached(
+            @PathVariable Long bookingId, @ModelAttribute @Valid DriverReachedRequest request) {
+        Long driverId = authenticatedUserProvider.getCurrentUserId();
+        DriverReachedResponse response = driverTripResponseService.markDriverReached(driverId, bookingId, request);
         return ResponseEntity.ok(response);
     }
 }

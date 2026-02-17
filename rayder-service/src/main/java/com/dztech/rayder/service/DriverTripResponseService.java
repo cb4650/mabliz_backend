@@ -6,6 +6,8 @@ import com.dztech.rayder.dto.DriverTripCloseResponse;
 import com.dztech.rayder.dto.DriverTripDepartureResponse;
 import com.dztech.rayder.dto.DriverTripDetailResponse;
 import com.dztech.rayder.dto.DriverTripListResponse;
+import com.dztech.rayder.dto.DriverReachedRequest;
+import com.dztech.rayder.dto.DriverReachedResponse;
 import com.dztech.rayder.dto.OtpVerificationRequest;
 import com.dztech.rayder.dto.OtpVerificationResponse;
 import com.dztech.rayder.dto.VehicleCompletionResponse;
@@ -262,6 +264,27 @@ public class DriverTripResponseService {
         }
 
         return new OtpVerificationResponse(true, "OTP verified successfully, trip started");
+    }
+
+    @Transactional
+    public DriverReachedResponse markDriverReached(Long driverId, Long bookingId, com.dztech.rayder.dto.DriverReachedRequest request) {
+        DriverRequest driverRequest = driverRequestRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (driverRequest.getAcceptedDriverId() == null || !driverRequest.getAcceptedDriverId().equals(driverId)) {
+            throw new IllegalArgumentException("Trip is not assigned to this driver");
+        }
+
+        // Mark driver as reached
+        Instant now = Instant.now();
+        driverRequest.setDriverReachedAt(now);
+        driverRequestRepository.save(driverRequest);
+
+        // TODO: Handle selfie image upload here
+        log.info("Driver marked as reached for bookingId: {}, selfie image received", bookingId);
+
+        return new DriverReachedResponse(true, "Driver marked as reached successfully", now);
     }
 
     @Transactional(readOnly = true)

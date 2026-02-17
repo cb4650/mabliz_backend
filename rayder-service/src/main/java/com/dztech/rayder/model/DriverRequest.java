@@ -114,6 +114,9 @@ public class DriverRequest {
     @Column(name = "trip_started_at")
     private Instant tripStartedAt;
 
+    @Column(name = "driver_reached_at")
+    private Instant driverReachedAt;
+
     @Column(name = "trip_closed_at")
     private Instant tripClosedAt;
 
