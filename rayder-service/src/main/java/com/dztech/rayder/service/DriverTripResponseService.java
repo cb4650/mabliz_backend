@@ -235,7 +235,29 @@ public class DriverTripResponseService {
                 && request.insurancePhoto() != null;
             
             if (!hasRequiredVehicleDetails) {
-                return new OtpVerificationResponse(false, "Vehicle details are required since vehicle is not completed");
+                // Build detailed error message showing what's missing
+                StringBuilder missingFields = new StringBuilder();
+                if (request.vehicleNo() == null || request.vehicleNo().trim().isEmpty()) {
+                    missingFields.append("vehicle number, ");
+                }
+                if (request.insuranceNo() == null || request.insuranceNo().trim().isEmpty()) {
+                    missingFields.append("insurance number, ");
+                }
+                if (request.insuranceExpiry() == null) {
+                    missingFields.append("insurance expiry date, ");
+                }
+                if (request.insurancePhoto() == null) {
+                    missingFields.append("insurance photo, ");
+                }
+                
+                // Remove trailing comma and space
+                String missingFieldsStr = missingFields.toString();
+                if (missingFieldsStr.endsWith(", ")) {
+                    missingFieldsStr = missingFieldsStr.substring(0, missingFieldsStr.length() - 2);
+                }
+                
+                String errorMessage = String.format("Vehicle details are required since vehicle is not completed. Missing fields: %s", missingFieldsStr);
+                return new OtpVerificationResponse(false, errorMessage);
             }
         }
 
