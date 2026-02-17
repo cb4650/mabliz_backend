@@ -91,6 +91,10 @@ public class DriverVehicle {
     @Column(name = "model", nullable = false, length = 100)
     private String model;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transmission_type", length = 50)
+    private TransmissionType transmissionType;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

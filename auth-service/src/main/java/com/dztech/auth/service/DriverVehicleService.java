@@ -4,6 +4,7 @@ import com.dztech.auth.dto.DriverVehicleCreateRequest;
 import com.dztech.auth.dto.DriverVehicleView;
 import com.dztech.auth.exception.ResourceNotFoundException;
 import com.dztech.auth.model.DriverVehicle;
+import com.dztech.auth.model.TransmissionType;
 import com.dztech.auth.model.VehicleType;
 import com.dztech.auth.repository.DriverProfileRepository;
 import com.dztech.auth.repository.DriverVehicleRepository;
@@ -53,6 +54,7 @@ public class DriverVehicleService {
         }
 
         VehicleType vehicleType = VehicleType.fromString(request.getVehicleType());
+        TransmissionType transmissionType = TransmissionType.fromString(request.getTransmissionType());
         LocalDate insuranceExpiryDate = parseInsuranceExpiry(request.getInsuranceExpiryDate());
         String rcImageObject =
                 uploadVehicleDocument(userId, vehicleNumber, request.getRcImage(), "rc-image");
@@ -65,6 +67,7 @@ public class DriverVehicleService {
                 .userId(userId)
                 .vehicleNumber(vehicleNumber)
                 .vehicleType(vehicleType)
+                .transmissionType(transmissionType)
                 .manufacturedYear(normalize(request.getManufacturedYear()))
                 .rcImageObject(rcImageObject)
                 .rcImageContentType(request.getRcImage().getContentType())
@@ -89,7 +92,8 @@ public class DriverVehicleService {
                 vehicle.getManufacturedYear(),
                 vehicle.getInsuranceExpiryDate(),
                 vehicle.getBrand(),
-                vehicle.getModel());
+                vehicle.getModel(),
+                vehicle.getTransmissionType() != null ? vehicle.getTransmissionType().name().toLowerCase(Locale.ROOT) : null);
     }
 
     private LocalDate parseInsuranceExpiry(String dateValue) {

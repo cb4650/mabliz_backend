@@ -9,5 +9,6 @@ public record DriverVehicleView(
         String manufacturedYear,
         LocalDate insuranceExpiryDate,
         String brand,
-        String model) {
+        String model,
+        String transmissionType) {
 }

@@ -38,6 +38,9 @@ public class DriverVehicleCreateRequest {
     @NotNull(message = "pollutionCertificateImage is required")
     private MultipartFile pollutionCertificateImage;
 
+    @NotBlank(message = "transmissionType is required")
+    private String transmissionType;
+
     public String getVehicleNumber() {
         return vehicleNumber;
     }
@@ -108,5 +111,13 @@ public class DriverVehicleCreateRequest {
 
     public void setPollutionCertificateImage(MultipartFile pollutionCertificateImage) {
         this.pollutionCertificateImage = pollutionCertificateImage;
+    }
+
+    public String getTransmissionType() {
+        return transmissionType;
+    }
+
+    public void setTransmissionType(String transmissionType) {
+        this.transmissionType = transmissionType;
     }
 }
