@@ -227,8 +227,14 @@ public class DriverTripResponseService {
         VehicleCompletionResponse vehicleCompletion = checkVehicleCompletionForDriver(driverId, bookingId);
         if (!vehicleCompletion.isVehicleCompleted()) {
             // Vehicle details are mandatory when vehicle is not completed
-            if (request.vehicleNo() == null || request.vehicleNo().trim().isEmpty()
-                    || request.insuranceExpiry() == null || request.insurancePhoto() == null) {
+            // Check if ALL required car details exist in the incoming payload
+            boolean hasRequiredVehicleDetails = 
+                request.vehicleNo() != null && !request.vehicleNo().trim().isEmpty()
+                && request.insuranceNo() != null && !request.insuranceNo().trim().isEmpty()
+                && request.insuranceExpiry() != null 
+                && request.insurancePhoto() != null;
+            
+            if (!hasRequiredVehicleDetails) {
                 return new OtpVerificationResponse(false, "Vehicle details are required since vehicle is not completed");
             }
         }
