@@ -72,6 +72,8 @@ public class DriverTripResponseController {
     public ResponseEntity<DriverTripDepartureResponse> markDeparted(
             @PathVariable Long bookingId, @RequestBody @Valid DriverDepartureRequest request) {
         Long driverId = authenticatedUserProvider.getCurrentUserId();
+        System.out.println("driverId");
+        System.out.println(driverId);
         DriverTripDepartureResponse response = driverTripResponseService.markDeparted(
                 driverId, bookingId, request.latitude(), request.longitude());
         return ResponseEntity.ok(response);
