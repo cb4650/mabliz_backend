@@ -24,5 +24,6 @@ public record DriverTripDetailResponse(
             String customerName,
             String customerPhone,
             String customerEmail,
-            String customerAddress) {}
+            String customerAddress,
+            Instant driverReachedAt) {}
 }

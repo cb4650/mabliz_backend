@@ -188,7 +188,8 @@ public class DriverTripResponseService {
                 userProfile.map(UserProfile::getName).orElse(null),
                 userProfile.map(UserProfile::getPhone).orElse(null),
                 userProfile.map(UserProfile::getEmail).orElse(null),
-                userProfile.map(UserProfile::getAddress).orElse(null));
+                userProfile.map(UserProfile::getAddress).orElse(null),
+                request.getDriverReachedAt());
 
         return new DriverTripDetailResponse(true, "Trip details", data);
     }
